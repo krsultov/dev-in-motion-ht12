@@ -227,7 +227,7 @@ export default function SettingsPage() {
                 ].map((item) => (
                   <div key={item.key} className="px-5 py-4 flex items-center justify-between gap-8">
                     <div>
-                      <p className="text-white text-sm font-medium">{item.label}</p>
+                      <p className="te  xt-white text-sm font-medium">{item.label}</p>
                       <p className="text-zinc-500 text-xs mt-0.5">{item.desc}</p>
                     </div>
                     <Toggle

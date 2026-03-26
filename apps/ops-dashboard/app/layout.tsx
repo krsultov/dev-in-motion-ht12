@@ -5,7 +5,7 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 
 export const metadata: Metadata = {
-  title: 'Companion – Operator Console',
+  title: 'Nelson – Operator Console',
   description: 'Nelson AI Voice Agent operator monitoring dashboard',
 }
 

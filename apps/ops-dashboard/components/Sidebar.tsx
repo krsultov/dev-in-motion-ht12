@@ -6,8 +6,14 @@ import {
   LayoutGrid,
   Clock,
   Users,
+  MapPin,
   TrendingUp,
+  Zap,
   BarChart2,
+  Activity,
+  Brain,
+  Shield,
+  CreditCard,
   Settings,
 } from 'lucide-react'
 
@@ -18,13 +24,24 @@ const navSections = [
       { icon: LayoutGrid, label: 'Dashboard', href: '/' },
       { icon: Clock, label: 'Call logs', href: '/call-logs' },
       { icon: Users, label: 'Users', href: '/users' },
+      { icon: MapPin, label: 'Regions', href: '/regions' },
     ],
   },
   {
     label: 'Analytics',
     items: [
       { icon: TrendingUp, label: 'Usage trends', href: '/usage-trends' },
+      { icon: Zap, label: 'API costs', href: '/costs' },
       { icon: BarChart2, label: 'Revenue', href: '/revenue' },
+    ],
+  },
+  {
+    label: 'Operations',
+    items: [
+      { icon: Activity, label: 'Agent health', href: '/agent-health' },
+      { icon: Brain, label: 'Memory stats', href: '/memory' },
+      { icon: Shield, label: 'Moderation', href: '/moderation' },
+      { icon: CreditCard, label: 'Billing', href: '/billing' },
     ],
   },
   {
@@ -45,7 +62,7 @@ export function Sidebar() {
           C
         </div>
         <div>
-          <div className="text-white font-semibold text-sm leading-tight">Companion</div>
+          <div className="text-white font-semibold text-sm leading-tight">Nelson</div>
           <div className="text-zinc-500 text-xs leading-tight">Operator console</div>
         </div>
       </div>
