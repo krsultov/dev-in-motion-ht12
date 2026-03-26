@@ -1,0 +1,12 @@
+{
+  "name": "@nelson/family-app",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Expo (iOS + Android + Web) — family portal",
+  "scripts": {
+    "dev": "echo 'TODO: setup dev script'",
+    "build": "echo 'TODO: setup build script'",
+    "lint": "echo 'TODO: setup lint'",
+    "typecheck": "echo 'TODO: setup typecheck'"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "nelson",
+  "private": true,
+  "description": "Nelson — voice-first AI agent platform",
+  "scripts": {
+    "dev": "echo 'Select a workspace: pnpm --filter <app> dev'",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "clean": "pnpm -r clean"
+  },
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=10"
+  },
+  "packageManager": "pnpm@10.33.0"
+}
