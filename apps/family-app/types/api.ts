@@ -16,6 +16,12 @@ export type ActivityItem = {
   day?: string;
 };
 
+export type ActivityResponse = {
+  items: ActivityItem[];
+  nextCursor: string | null;
+  hasMore: boolean;
+};
+
 export type Approval = {
   id: string;
   title: string;

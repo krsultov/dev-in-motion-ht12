@@ -1,4 +1,4 @@
-import type { Preference } from '@/types/api';
+import type { ActivityResponse, Preference } from '@/types/api';
 
 export type ApiErrorCode =
   | 'UNAUTHORIZED'
@@ -68,4 +68,19 @@ export async function updateMemoryEntry(
     method: 'PATCH',
     body: JSON.stringify({ value }),
   });
+}
+
+export async function fetchActivity(
+  parentId: string,
+  token: string,
+  cursor?: string,
+  limit = 20,
+): Promise<ActivityResponse> {
+  const params = new URLSearchParams({ limit: String(limit) });
+
+  if (cursor) {
+    params.set('cursor', cursor);
+  }
+
+  return apiFetch<ActivityResponse>(`/parent/${parentId}/activity?${params.toString()}`, token);
 }

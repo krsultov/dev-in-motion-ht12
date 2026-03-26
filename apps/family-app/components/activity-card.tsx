@@ -1,7 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import { Card, Text } from 'react-native-paper';
 
-import type { ActivityItem } from '@/data/dummy';
+import type { ActivityItem } from '@/types/api';
 
 import { StatusTag } from './status-tag';
 
