@@ -7,17 +7,20 @@ import { useAuth } from '@/context/auth-context';
 import { parentProfile } from '@/data/dummy';
 
 export default function AuthScreen() {
-  // This screen renders a local-only OTP gate for the family member app.
-  const [otp, setOtp] = useState<string>('');
-  const { setIsAuthenticated } = useAuth();
+  const [name, setName] = useState<string>('');
+  const [phone, setPhone] = useState<string>('');
+  const { signIn } = useAuth();
 
   const handleContinue = () => {
-    if (otp !== '123456') {
-      Alert.alert('Incorrect code', 'Use the demo OTP 123456 to enter the app.');
+    const trimmedName = name.trim();
+    const trimmedPhone = phone.trim();
+
+    if (!trimmedName || !trimmedPhone) {
+      Alert.alert('Missing details', 'Enter your name and phone number to continue.');
       return;
     }
 
-    setIsAuthenticated(true);
+    signIn({ name: trimmedName, phone: trimmedPhone });
     router.replace('/(tabs)/home');
   };
 
@@ -26,7 +29,7 @@ export default function AuthScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={styles.container}>
       <View style={styles.content}>
-        <Text variant="headlineMedium" style={styles.title}>
+        <Text variant="headlineLarge" style={styles.title}>
           Nelson
         </Text>
         <Text variant="bodyLarge" style={styles.subtitle}>
@@ -38,21 +41,33 @@ export default function AuthScreen() {
             Family access
           </Text>
           <Text variant="bodyMedium" style={styles.cardText}>
-            Enter the demo OTP to open the oversight dashboard. No real authentication is wired yet.
+            Sign in with your name and phone number to open the family dashboard.
           </Text>
           <TextInput
-            label="One-time code"
+            label="Your name"
             mode="outlined"
-            keyboardType="number-pad"
-            maxLength={6}
-            value={otp}
-            onChangeText={setOtp}
+            autoCapitalize="words"
+            textColor="#FFFFFF"
+            outlineColor="#2D2D2D"
+            activeOutlineColor="#8B8DF1"
+            value={name}
+            onChangeText={setName}
           />
-          <Button mode="contained" onPress={handleContinue}>
-            Verify OTP
+          <TextInput
+            label="Phone number"
+            mode="outlined"
+            keyboardType="phone-pad"
+            textColor="#FFFFFF"
+            outlineColor="#2D2D2D"
+            activeOutlineColor="#8B8DF1"
+            value={phone}
+            onChangeText={setPhone}
+          />
+          <Button mode="contained" buttonColor="#8B8DF1" textColor="#18181B" onPress={handleContinue}>
+            Continue
           </Button>
           <Text variant="bodySmall" style={styles.hint}>
-            Demo code: 123456
+            No verification code required.
           </Text>
         </Surface>
       </View>
@@ -62,7 +77,7 @@ export default function AuthScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#121212',
     flex: 1,
   },
   content: {
@@ -72,25 +87,29 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   title: {
+    color: '#FFFFFF',
+    letterSpacing: -0.4,
     fontWeight: '700',
   },
   subtitle: {
-    color: '#475569',
+    color: '#A1A1AA',
     lineHeight: 24,
   },
   card: {
+    backgroundColor: '#1E1E1E',
     borderRadius: 20,
     gap: 16,
     padding: 20,
   },
   cardTitle: {
+    color: '#FFFFFF',
     fontWeight: '700',
   },
   cardText: {
-    color: '#475569',
+    color: '#A1A1AA',
     lineHeight: 22,
   },
   hint: {
-    color: '#64748B',
+    color: '#7C7C87',
   },
 });
