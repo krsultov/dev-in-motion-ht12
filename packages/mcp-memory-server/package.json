@@ -1,0 +1,12 @@
+{
+  "name": "@nelson/mcp-memory-server",
+  "version": "0.0.1",
+  "private": true,
+  "description": "MCP server: user profile + memory CRUD",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "echo 'TODO: setup build script'",
+    "lint": "echo 'TODO: setup lint'",
+    "typecheck": "echo 'TODO: setup typecheck'"
+  }
+}

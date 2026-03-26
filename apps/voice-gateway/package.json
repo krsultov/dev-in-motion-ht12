@@ -1,0 +1,12 @@
+{
+  "name": "@nelson/voice-gateway",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Call entrypoint, STT/TTS pipeline — Hono.js",
+  "scripts": {
+    "dev": "echo 'TODO: setup dev script'",
+    "build": "echo 'TODO: setup build script'",
+    "lint": "echo 'TODO: setup lint'",
+    "typecheck": "echo 'TODO: setup typecheck'"
+  }
+}

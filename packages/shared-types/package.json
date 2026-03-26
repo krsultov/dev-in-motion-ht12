@@ -1,0 +1,12 @@
+{
+  "name": "@nelson/shared-types",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Zod schemas: UserProfile, CallSession, MemoryItem, Reminder",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "echo 'TODO: setup build script'",
+    "lint": "echo 'TODO: setup lint'",
+    "typecheck": "echo 'TODO: setup typecheck'"
+  }
+}

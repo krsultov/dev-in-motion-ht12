@@ -1,0 +1,37 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .: {}
+
+  apps/api: {}
+
+  apps/family-app: {}
+
+  apps/ops-dashboard: {}
+
+  apps/voice-gateway: {}
+
+  packages/agent-core: {}
+
+  packages/clients: {}
+
+  packages/config: {}
+
+  packages/db: {}
+
+  packages/mcp-memory-server: {}
+
+  packages/mcp-reminders-server: {}
+
+  packages/memory-domain: {}
+
+  packages/reminders-domain: {}
+
+  packages/shared-types: {}
+
+  packages/shared-ui: {}
