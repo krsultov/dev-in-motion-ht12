@@ -1,6 +1,7 @@
 export type ActivityCategory = 'calendar' | 'call' | 'search' | 'purchase';
 export type ActivityDay = 'Today' | 'Yesterday';
 export type ApprovalStatus = 'pending' | 'approved' | 'declined';
+export type CalendarActivityType = 'assistant' | 'booking' | 'trip';
 
 export type ParentProfile = {
   name: string;
@@ -76,6 +77,62 @@ export type FamilyAccountProfile = {
   permissionLevel: string;
   notificationPreferences: NotificationPreference[];
 };
+
+export type CalendarActivity = {
+  id: string;
+  date: string;
+  title: string;
+  detail: string;
+  type: CalendarActivityType;
+  isFuture?: boolean;
+};
+
+function addDaysToDate(value: Date, amount: number) {
+  const next = new Date(value);
+  next.setDate(next.getDate() + amount);
+  return next;
+}
+
+function startOfMonthDate(value: Date) {
+  return new Date(value.getFullYear(), value.getMonth(), 1);
+}
+
+function endOfMonthDate(value: Date) {
+  return new Date(value.getFullYear(), value.getMonth() + 1, 0, 23, 59, 59, 999);
+}
+
+function shiftMonth(value: Date, offset: number) {
+  return new Date(value.getFullYear(), value.getMonth() + offset, 1);
+}
+
+function setTime(value: Date, hours: number, minutes: number) {
+  const next = new Date(value);
+  next.setHours(hours, minutes, 0, 0);
+  return next;
+}
+
+function getNextMonday(value: Date) {
+  const next = new Date(value);
+  const dayOfWeek = next.getDay();
+  const daysUntilMonday = ((8 - dayOfWeek) % 7) || 7;
+  next.setDate(next.getDate() + daysUntilMonday);
+  return next;
+}
+
+function formatDateKey(value: Date) {
+  const year = value.getFullYear();
+  const month = `${value.getMonth() + 1}`.padStart(2, '0');
+  const day = `${value.getDate()}`.padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function formatTimeLabel(value: Date) {
+  let hours = value.getHours();
+  const minutes = `${value.getMinutes()}`.padStart(2, '0');
+  const suffix = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12 || 12;
+  return `${hours}:${minutes} ${suffix}`;
+}
 
 export const parentProfile: ParentProfile = {
   name: 'Maria Angelova',
@@ -156,6 +213,74 @@ export const familyAccountProfile: FamilyAccountProfile = {
     { id: 'unusual-activity', label: 'Unusual Activity', enabled: false },
   ],
 };
+
+function buildCurrentMonthCalendarActivities(): CalendarActivity[] {
+  const today = new Date();
+  const entries: CalendarActivity[] = [];
+  const addEntry = (
+    id: string,
+    when: Date,
+    title: string,
+    type: CalendarActivityType,
+    isFuture = false,
+  ) => {
+    entries.push({
+      id,
+      date: formatDateKey(when),
+      title,
+      detail: `${formatTimeLabel(when)}${isFuture ? ' scheduled' : ''}`,
+      type,
+      isFuture,
+    });
+  };
+
+  const previousMonthStart = startOfMonthDate(shiftMonth(today, -1));
+  const currentMonthStart = startOfMonthDate(today);
+  const nextMonthStart = startOfMonthDate(shiftMonth(today, 1));
+  const nextMondayDate = getNextMonday(today);
+
+  const createDate = (
+    monthStart: Date,
+    dayOffset: number,
+    hours: number,
+    minutes: number,
+  ) => setTime(addDaysToDate(monthStart, dayOffset), hours, minutes);
+
+  addEntry('cm-prev-1', createDate(previousMonthStart, 2, 9, 20), 'Talked with the AI about breakfast ideas', 'assistant');
+  addEntry('cm-prev-2', createDate(previousMonthStart, 6, 11, 5), 'Booked home lab visit', 'booking');
+  addEntry('cm-prev-3', createDate(previousMonthStart, 11, 15, 10), 'Trip to the neighborhood pharmacy', 'trip');
+  addEntry('cm-prev-4', createDate(previousMonthStart, 18, 10, 30), 'Asked the AI to read a message aloud', 'assistant');
+  addEntry('cm-prev-5', createDate(previousMonthStart, 23, 13, 45), 'Reserved grocery delivery window', 'booking');
+
+  addEntry('cm-cur-1', createDate(currentMonthStart, 1, 9, 15), 'Talked with the AI about breakfast ideas', 'assistant');
+  addEntry('cm-cur-2', createDate(currentMonthStart, 3, 11, 0), 'Booked cardiology check-up', 'booking');
+  addEntry('cm-cur-3', createDate(currentMonthStart, 5, 15, 30), 'Taxi ride to Tokuda Hospital', 'trip');
+  addEntry('cm-cur-4', createDate(currentMonthStart, 7, 10, 10), 'Asked the AI to summarize medication notes', 'assistant');
+  addEntry('cm-cur-5', createDate(currentMonthStart, 9, 14, 0), 'Reserved grocery delivery window', 'booking');
+  addEntry('cm-cur-6', createDate(currentMonthStart, 12, 13, 20), 'Trip to the neighborhood pharmacy', 'trip');
+  addEntry('cm-cur-7', createDate(currentMonthStart, 14, 8, 45), 'Morning check-in with the AI assistant', 'assistant');
+  addEntry('cm-cur-8', createDate(currentMonthStart, 17, 16, 15), 'Booked family video call', 'booking');
+  addEntry('cm-cur-9', createDate(currentMonthStart, 19, 12, 40), 'Visited the park with a neighbor', 'trip');
+  addEntry('cm-cur-10', addDaysToDate(today, -2), 'Asked the AI about blood pressure readings', 'assistant');
+  addEntry('cm-cur-11', addDaysToDate(today, -1), 'Booked prescription refill pickup', 'booking');
+  addEntry('cm-cur-12', today, 'Talked with the AI assistant after lunch', 'assistant');
+  addEntry('cm-cur-13', today, 'Logged taxi trip to the clinic', 'trip');
+  addEntry('cm-cur-14', addDaysToDate(today, 1), 'Call Elena tomorrow at 9:00 AM', 'booking', true);
+  addEntry('cm-cur-15', nextMondayDate, 'Set evening alarm for 8:00 PM next Monday', 'booking', true);
+  addEntry('cm-cur-16', addDaysToDate(today, 4), 'Planned ride to the community center', 'trip', true);
+
+  addEntry('cm-next-1', createDate(nextMonthStart, 2, 10, 0), 'Morning AI check-in before breakfast', 'assistant', true);
+  addEntry('cm-next-2', createDate(nextMonthStart, 5, 9, 30), 'Book dental follow-up call', 'booking', true);
+  addEntry('cm-next-3', createDate(nextMonthStart, 9, 14, 15), 'Ride to the senior center', 'trip', true);
+  addEntry('cm-next-4', createDate(nextMonthStart, 13, 8, 0), 'Set medicine reminder for the evening', 'booking', true);
+  addEntry('cm-next-5', createDate(nextMonthStart, 18, 11, 25), 'Talk with the AI about meal planning', 'assistant', true);
+
+  return entries.sort((left, right) =>
+    `${left.date} ${left.detail}`.localeCompare(`${right.date} ${right.detail}`),
+  );
+}
+
+export const calendarMonthActivities: CalendarActivity[] = buildCurrentMonthCalendarActivities();
 
 export const memoryData: MemoryData = {
   medications: [
