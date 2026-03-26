@@ -1,4 +1,5 @@
 import { DefaultTheme as NavigationDefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as Notifications from 'expo-notifications';
@@ -6,6 +7,8 @@ import 'react-native-reanimated';
 import { MD3LightTheme, PaperProvider } from 'react-native-paper';
 
 import { AuthProvider } from '@/context/auth-context';
+
+const queryClient = new QueryClient();
 
 export default function RootLayout() {
   void Notifications;
@@ -37,17 +40,19 @@ export default function RootLayout() {
   };
 
   return (
-    <PaperProvider theme={paperTheme}>
-      <AuthProvider>
-        <ThemeProvider value={navigationTheme}>
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="index" />
-            <Stack.Screen name="auth" />
-            <Stack.Screen name="(tabs)" />
-          </Stack>
-          <StatusBar style="dark" />
-        </ThemeProvider>
-      </AuthProvider>
-    </PaperProvider>
+    <QueryClientProvider client={queryClient}>
+      <PaperProvider theme={paperTheme}>
+        <AuthProvider>
+          <ThemeProvider value={navigationTheme}>
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="index" />
+              <Stack.Screen name="auth" />
+              <Stack.Screen name="(tabs)" />
+            </Stack>
+            <StatusBar style="dark" />
+          </ThemeProvider>
+        </AuthProvider>
+      </PaperProvider>
+    </QueryClientProvider>
   );
 }

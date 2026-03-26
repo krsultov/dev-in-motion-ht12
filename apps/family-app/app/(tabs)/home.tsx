@@ -1,18 +1,42 @@
+import { formatDistanceToNow, parseISO } from 'date-fns';
 import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Avatar, Card, Surface, Text } from 'react-native-paper';
+import { ActivityIndicator, Avatar, Card, Surface, Text } from 'react-native-paper';
 
 import { ScreenShell } from '@/components/screen-shell';
 import { StatusTag } from '@/components/status-tag';
-import { activityItems, approvals, parentProfile } from '@/data/dummy';
+import { activityItems } from '@/data/dummy';
+import { useApprovals } from '@/hooks/useApprovals';
+import { useParentProfile } from '@/hooks/useParentProfile';
+import { useRecentActivity } from '@/hooks/useRecentActivity';
+
+function getLastActiveLabel(lastActiveAt: string | undefined) {
+  if (!lastActiveAt) {
+    return '';
+  }
+
+  try {
+    const parsed = parseISO(lastActiveAt);
+
+    if (!Number.isNaN(parsed.getTime())) {
+      return formatDistanceToNow(parsed, { addSuffix: true });
+    }
+  } catch {
+    return lastActiveAt;
+  }
+
+  return lastActiveAt;
+}
 
 export default function HomeScreen() {
   // This screen renders the family dashboard summary with profile, recent activity, and approval count.
   const router = useRouter();
-  const recentItems = activityItems.slice(0, 2);
-  const pendingCount = approvals.filter((item) => item.status === 'pending').length;
+  const { data: profile, isLoading: profileLoading } = useParentProfile();
+  const { items: recentItems, isLoading: activityLoading } = useRecentActivity();
+  const { pendingCount, isLoading: approvalsLoading } = useApprovals();
   const todayCount = activityItems.filter((item) => item.day === 'Today').length;
+  const lastActiveLabel = getLastActiveLabel(profile?.lastActiveAt);
 
   return (
     <ScreenShell>
@@ -24,30 +48,36 @@ export default function HomeScreen() {
       </Text>
 
       <Surface style={styles.heroCard} elevation={1}>
-        <View style={styles.heroTopRow}>
-          <Avatar.Text
-            size={54}
-            label={parentProfile.initials}
-            labelStyle={styles.avatarLabel}
-            style={styles.avatar}
-          />
-          <View style={styles.heroText}>
-            <Text variant="titleLarge" style={styles.parentName}>
-              {parentProfile.name}
-            </Text>
-            <Text variant="bodySmall" style={styles.parentMeta}>
-              Last active: {parentProfile.lastActive}
-            </Text>
-          </View>
-        </View>
+        {profileLoading ? (
+          <ActivityIndicator color="#23244D" />
+        ) : (
+          <>
+            <View style={styles.heroTopRow}>
+              <Avatar.Text
+                size={54}
+                label={profile?.initials ?? ''}
+                labelStyle={styles.avatarLabel}
+                style={styles.avatar}
+              />
+              <View style={styles.heroText}>
+                <Text variant="titleLarge" style={styles.parentName}>
+                  {profile?.name}
+                </Text>
+                <Text variant="bodySmall" style={styles.parentMeta}>
+                  Last active: {lastActiveLabel}
+                </Text>
+              </View>
+            </View>
 
-        <View style={styles.heroTags}>
-          <StatusTag
-            label={parentProfile.aiActive ? 'AI active' : 'AI inactive'}
-            tone={parentProfile.aiActive ? 'approved' : 'declined'}
-          />
-          <StatusTag label={`${todayCount} tasks today`} tone="calendar" />
-        </View>
+            <View style={styles.heroTags}>
+              <StatusTag
+                label={profile?.aiActive ? 'AI active' : 'AI inactive'}
+                tone={profile?.aiActive ? 'approved' : 'declined'}
+              />
+              <StatusTag label={`${todayCount} tasks today`} tone="calendar" />
+            </View>
+          </>
+        )}
       </Surface>
 
       <View style={styles.sectionHeader}>
@@ -58,39 +88,49 @@ export default function HomeScreen() {
 
       <Card mode="outlined" style={styles.timelineCard}>
         <Card.Content style={styles.timelineContent}>
-          {recentItems.map((item, index) => (
-            <View key={item.id} style={styles.timelineRow}>
-              <View style={styles.timelineRail}>
-                <View
-                  style={[styles.timelineDot, index === 1 ? styles.timelineDotSecondary : null]}
-                />
-                {index < recentItems.length - 1 ? <View style={styles.timelineLine} /> : null}
+          {activityLoading ? (
+            <ActivityIndicator color="#8B8DF1" />
+          ) : (
+            recentItems.map((item, index) => (
+              <View key={item.id} style={styles.timelineRow}>
+                <View style={styles.timelineRail}>
+                  <View
+                    style={[styles.timelineDot, index === 1 ? styles.timelineDotSecondary : null]}
+                  />
+                  {index < recentItems.length - 1 ? <View style={styles.timelineLine} /> : null}
+                </View>
+                <View style={styles.timelineTextBlock}>
+                  <Text variant="titleSmall" style={styles.timelineTitle}>
+                    {item.title}
+                  </Text>
+                  <Text variant="bodySmall" style={styles.timelineDescription}>
+                    {item.description}
+                  </Text>
+                </View>
               </View>
-              <View style={styles.timelineTextBlock}>
-                <Text variant="titleSmall" style={styles.timelineTitle}>
-                  {item.title}
-                </Text>
-                <Text variant="bodySmall" style={styles.timelineDescription}>
-                  {item.description}
-                </Text>
-              </View>
-            </View>
-          ))}
+            ))
+          )}
         </Card.Content>
       </Card>
 
       <Card mode="outlined" style={styles.alertCard} onPress={() => router.push('/(tabs)/approvals')}>
         <Card.Content style={styles.alertContent}>
-          <View style={styles.alertText}>
-            <Text variant="titleMedium" style={styles.alertTitle}>
-              Pending approval
-            </Text>
-            <Text variant="bodyMedium" style={styles.alertSubtitle}>
-              Review requests and purchases that need your confirmation.
-            </Text>
-          </View>
-          <StatusTag label={`${pendingCount} pending`} tone="pending" />
-          <Ionicons name="chevron-forward" size={18} color="#7C7893" />
+          {approvalsLoading ? (
+            <ActivityIndicator color="#8B8DF1" />
+          ) : (
+            <>
+              <View style={styles.alertText}>
+                <Text variant="titleMedium" style={styles.alertTitle}>
+                  Pending approval
+                </Text>
+                <Text variant="bodyMedium" style={styles.alertSubtitle}>
+                  Review requests and purchases that need your confirmation.
+                </Text>
+              </View>
+              <StatusTag label={`${pendingCount} pending`} tone="pending" />
+              <Ionicons name="chevron-forward" size={18} color="#7C7893" />
+            </>
+          )}
         </Card.Content>
       </Card>
     </ScreenShell>

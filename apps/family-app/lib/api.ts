@@ -1,0 +1,56 @@
+export type ApiErrorCode =
+  | 'UNAUTHORIZED'
+  | 'FORBIDDEN'
+  | 'NOT_FOUND'
+  | 'VALIDATION_ERROR'
+  | 'INTERNAL_ERROR'
+  | 'UNKNOWN_ERROR';
+
+export class ApiError extends Error {
+  code: ApiErrorCode;
+  statusCode: number;
+
+  constructor(message: string, code: ApiErrorCode = 'UNKNOWN_ERROR', statusCode: number) {
+    super(message);
+    this.name = 'ApiError';
+    this.code = code;
+    this.statusCode = statusCode;
+  }
+}
+
+const BASE = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1';
+
+type ErrorResponse = {
+  code?: ApiErrorCode;
+  message?: string;
+};
+
+export async function apiFetch<T>(
+  path: string,
+  token: string,
+  options?: RequestInit,
+): Promise<T> {
+  const response = await fetch(`${BASE}${path}`, {
+    ...options,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      ...(options?.headers ?? {}),
+    },
+  });
+
+  const text = await response.text();
+  const json = text ? (JSON.parse(text) as T | ErrorResponse) : null;
+
+  if (!response.ok) {
+    const errorBody = (json ?? {}) as ErrorResponse;
+
+    throw new ApiError(
+      errorBody.message ?? 'Request failed',
+      errorBody.code ?? 'UNKNOWN_ERROR',
+      response.status,
+    );
+  }
+
+  return json as T;
+}

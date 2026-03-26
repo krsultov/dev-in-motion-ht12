@@ -9,7 +9,7 @@ import { parentProfile } from '@/data/dummy';
 export default function AuthScreen() {
   // This screen renders a local-only OTP gate for the family member app.
   const [otp, setOtp] = useState<string>('');
-  const { setIsAuthenticated } = useAuth();
+  const { setIsAuthenticated, setParentId, setToken } = useAuth();
 
   const handleContinue = () => {
     if (otp !== '123456') {
@@ -17,6 +17,8 @@ export default function AuthScreen() {
       return;
     }
 
+    setParentId('demo-parent-id');
+    setToken('demo-jwt-token');
     setIsAuthenticated(true);
     router.replace('/(tabs)/home');
   };
