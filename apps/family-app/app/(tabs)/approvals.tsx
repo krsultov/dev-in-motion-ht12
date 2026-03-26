@@ -59,24 +59,27 @@ const styles = StyleSheet.create({
   title: {
     color: '#FFFFFF',
     fontWeight: '700',
+    letterSpacing: -0.3,
   },
   subtitle: {
     color: '#A1A1AA',
-    marginBottom: 20,
-    marginTop: 6,
+    lineHeight: 21,
+    marginBottom: 24,
+    marginTop: 8,
   },
   section: {
-    marginBottom: 16,
+    marginBottom: 20,
   },
   sectionTitle: {
     color: '#A1A1AA',
     fontSize: 12,
     fontWeight: '700',
-    letterSpacing: 0.4,
-    marginBottom: 12,
+    letterSpacing: 0.6,
+    marginBottom: 14,
     textTransform: 'uppercase',
   },
   emptyState: {
     color: '#A1A1AA',
+    lineHeight: 20,
   },
 });
