@@ -6,6 +6,7 @@ type MemoryRow = {
   id: string;
   label: string;
   detail: string;
+  iconColor?: string;
 };
 
 type MemorySectionCardProps = {
@@ -33,9 +34,9 @@ export function MemorySectionCard({
         />
       </View>
 
-      {rows.map((row) => (
-        <View key={row.id} style={styles.row}>
-          <View style={[styles.iconBadge, { backgroundColor: accentColor }]}>
+      {rows.map((row, index) => (
+        <View key={row.id} style={[styles.row, index === rows.length - 1 ? styles.lastRow : null]}>
+          <View style={[styles.iconBadge, { backgroundColor: row.iconColor ?? accentColor }]}>
             <Ionicons name={iconName} size={16} color="#FFFFFF" />
           </View>
           <View style={styles.rowText}>
@@ -54,6 +55,8 @@ export function MemorySectionCard({
 
 const styles = StyleSheet.create({
   card: {
+    backgroundColor: '#1E1E1E',
+    borderColor: '#2D2D2D',
     borderRadius: 16,
     gap: 12,
     marginBottom: 16,
@@ -66,12 +69,20 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   title: {
+    color: '#FFFFFF',
     fontWeight: '700',
   },
   row: {
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    borderBottomColor: '#2D2D2D',
+    borderBottomWidth: 1,
     flexDirection: 'row',
     gap: 12,
+    paddingBottom: 10,
+  },
+  lastRow: {
+    borderBottomWidth: 0,
+    paddingBottom: 0,
   },
   iconBadge: {
     alignItems: 'center',
@@ -84,10 +95,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   primary: {
+    color: '#FFFFFF',
     fontWeight: '600',
   },
   secondary: {
-    color: '#64748B',
+    color: '#A1A1AA',
+    lineHeight: 18,
     marginTop: 2,
   },
 });

@@ -1,7 +1,8 @@
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Text } from 'react-native-paper';
 
 import { ActivityCard } from '@/components/activity-card';
+import { ScreenShell } from '@/components/screen-shell';
 import { activityItems } from '@/data/dummy';
 
 const groupedActivity = {
@@ -12,12 +13,12 @@ const groupedActivity = {
 export default function ActivityScreen() {
   // This screen renders the full assistant activity feed grouped by day.
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScreenShell>
       <Text variant="headlineSmall" style={styles.title}>
-        Assistant activity
+        Activity
       </Text>
       <Text variant="bodyMedium" style={styles.subtitle}>
-        Calls, searches, bookings, and purchases made for Maria.
+        What the AI did for Maria.
       </Text>
 
       {(['Today', 'Yesterday'] as const).map((day) => (
@@ -30,20 +31,17 @@ export default function ActivityScreen() {
           ))}
         </View>
       ))}
-    </ScrollView>
+    </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: '#F8FAFC',
-    padding: 20,
-  },
   title: {
+    color: '#FFFFFF',
     fontWeight: '700',
   },
   subtitle: {
-    color: '#475569',
+    color: '#A1A1AA',
     marginBottom: 20,
     marginTop: 6,
   },
@@ -51,7 +49,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   groupTitle: {
+    color: '#A1A1AA',
+    fontSize: 12,
     fontWeight: '700',
+    letterSpacing: 0.4,
     marginBottom: 12,
+    textTransform: 'uppercase',
   },
 });

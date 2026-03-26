@@ -9,13 +9,13 @@ type StatusTagProps = {
 };
 
 const toneColors: Record<StatusTagProps['tone'], { backgroundColor: string; textColor: string }> = {
-  calendar: { backgroundColor: '#F3E8FF', textColor: '#7C3AED' },
-  call: { backgroundColor: '#DCFCE7', textColor: '#15803D' },
-  search: { backgroundColor: '#FEF3C7', textColor: '#B45309' },
-  purchase: { backgroundColor: '#DBEAFE', textColor: '#1D4ED8' },
-  pending: { backgroundColor: '#FEF3C7', textColor: '#B45309' },
-  approved: { backgroundColor: '#DCFCE7', textColor: '#15803D' },
-  declined: { backgroundColor: '#FEE2E2', textColor: '#B91C1C' },
+  calendar: { backgroundColor: '#CDCFFC', textColor: '#23244D' },
+  call: { backgroundColor: '#D4F4E4', textColor: '#173D2C' },
+  search: { backgroundColor: '#F9E4D4', textColor: '#5C3520' },
+  purchase: { backgroundColor: '#CDCFFC', textColor: '#23244D' },
+  pending: { backgroundColor: '#F9E4D4', textColor: '#5C3520' },
+  approved: { backgroundColor: '#D4F4E4', textColor: '#173D2C' },
+  declined: { backgroundColor: '#F9D4D4', textColor: '#5A2222' },
 };
 
 export function StatusTag({ label, tone }: StatusTagProps) {
@@ -33,6 +33,8 @@ export function StatusTag({ label, tone }: StatusTagProps) {
 
 const styles = StyleSheet.create({
   chip: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#2D2D2D',
     height: 30,
   },
   text: {

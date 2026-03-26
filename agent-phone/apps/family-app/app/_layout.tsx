@@ -14,10 +14,10 @@ export default function RootLayout() {
     ...NavigationDefaultTheme,
     colors: {
       ...NavigationDefaultTheme.colors,
-      background: '#F8FAFC',
-      card: '#FFFFFF',
-      primary: '#2563EB',
-      text: '#0F172A',
+      background: '#121212',
+      card: '#1E1E1E',
+      primary: '#8B8DF1',
+      text: '#FFFFFF',
     },
   };
 
@@ -25,10 +25,14 @@ export default function RootLayout() {
     ...MD3LightTheme,
     colors: {
       ...MD3LightTheme.colors,
-      background: '#F8FAFC',
-      primary: '#2563EB',
-      secondary: '#0F766E',
-      surface: '#FFFFFF',
+      background: '#121212',
+      onSurface: '#FFFFFF',
+      onSurfaceVariant: '#A1A1AA',
+      outline: '#2D2D2D',
+      primary: '#8B8DF1',
+      secondary: '#CDCFFC',
+      surface: '#1E1E1E',
+      surfaceVariant: '#2D2D2D',
     },
   };
 

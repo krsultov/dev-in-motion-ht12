@@ -1,8 +1,9 @@
 import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { Avatar, Card, Surface, Text } from 'react-native-paper';
 
-import { ActivityCard } from '@/components/activity-card';
+import { ScreenShell } from '@/components/screen-shell';
 import { StatusTag } from '@/components/status-tag';
 import { activityItems, approvals, parentProfile } from '@/data/dummy';
 
@@ -11,34 +12,41 @@ export default function HomeScreen() {
   const router = useRouter();
   const recentItems = activityItems.slice(0, 2);
   const pendingCount = approvals.filter((item) => item.status === 'pending').length;
+  const todayCount = activityItems.filter((item) => item.day === 'Today').length;
 
   return (
-    <View style={styles.container}>
+    <ScreenShell>
       <Text variant="headlineSmall" style={styles.title}>
         Good morning, Ivan
       </Text>
       <Text variant="bodyMedium" style={styles.subtitle}>
-        Here is a quick view of how Nelson is helping today.
+        Your mother&apos;s assistant is active and keeping things on track.
       </Text>
 
       <Surface style={styles.heroCard} elevation={1}>
-        <View style={styles.heroHeader}>
-          <Avatar.Text size={54} label={parentProfile.initials} />
+        <View style={styles.heroTopRow}>
+          <Avatar.Text
+            size={54}
+            label={parentProfile.initials}
+            labelStyle={styles.avatarLabel}
+            style={styles.avatar}
+          />
           <View style={styles.heroText}>
             <Text variant="titleLarge" style={styles.parentName}>
               {parentProfile.name}
             </Text>
-            <Text variant="bodyMedium" style={styles.parentMeta}>
-              {parentProfile.phone}
-            </Text>
             <Text variant="bodySmall" style={styles.parentMeta}>
-              Last active {parentProfile.lastActive}
+              Last active: {parentProfile.lastActive}
             </Text>
           </View>
+        </View>
+
+        <View style={styles.heroTags}>
           <StatusTag
             label={parentProfile.aiActive ? 'AI active' : 'AI inactive'}
             tone={parentProfile.aiActive ? 'approved' : 'declined'}
           />
+          <StatusTag label={`${todayCount} tasks today`} tone="calendar" />
         </View>
       </Surface>
 
@@ -48,72 +56,164 @@ export default function HomeScreen() {
         </Text>
       </View>
 
-      {recentItems.map((item) => (
-        <ActivityCard key={item.id} item={item} />
-      ))}
-
-      <Card mode="outlined" style={styles.alertCard} onPress={() => router.push('/(tabs)/approvals')}>
-        <Card.Content>
-          <Text variant="titleMedium" style={styles.alertTitle}>
-            {pendingCount} approval {pendingCount === 1 ? 'request' : 'requests'} waiting
-          </Text>
-          <Text variant="bodyMedium" style={styles.alertSubtitle}>
-            Review purchases and actions that need your confirmation.
-          </Text>
+      <Card mode="outlined" style={styles.timelineCard}>
+        <Card.Content style={styles.timelineContent}>
+          {recentItems.map((item, index) => (
+            <View key={item.id} style={styles.timelineRow}>
+              <View style={styles.timelineRail}>
+                <View
+                  style={[styles.timelineDot, index === 1 ? styles.timelineDotSecondary : null]}
+                />
+                {index < recentItems.length - 1 ? <View style={styles.timelineLine} /> : null}
+              </View>
+              <View style={styles.timelineTextBlock}>
+                <Text variant="titleSmall" style={styles.timelineTitle}>
+                  {item.title}
+                </Text>
+                <Text variant="bodySmall" style={styles.timelineDescription}>
+                  {item.description}
+                </Text>
+              </View>
+            </View>
+          ))}
         </Card.Content>
       </Card>
-    </View>
+
+      <Card mode="outlined" style={styles.alertCard} onPress={() => router.push('/(tabs)/approvals')}>
+        <Card.Content style={styles.alertContent}>
+          <View style={styles.alertText}>
+            <Text variant="titleMedium" style={styles.alertTitle}>
+              Pending approval
+            </Text>
+            <Text variant="bodyMedium" style={styles.alertSubtitle}>
+              Review requests and purchases that need your confirmation.
+            </Text>
+          </View>
+          <StatusTag label={`${pendingCount} pending`} tone="pending" />
+          <Ionicons name="chevron-forward" size={18} color="#7C7893" />
+        </Card.Content>
+      </Card>
+    </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: '#F8FAFC',
-    flex: 1,
-    padding: 20,
-  },
   title: {
+    color: '#FFFFFF',
     fontWeight: '700',
   },
   subtitle: {
-    color: '#475569',
+    color: '#A1A1AA',
     marginBottom: 20,
     marginTop: 6,
   },
   heroCard: {
-    borderRadius: 20,
+    backgroundColor: '#CDCFFC',
+    borderColor: '#CDCFFC',
+    borderRadius: 18,
     marginBottom: 22,
     padding: 18,
   },
-  heroHeader: {
+  heroTopRow: {
     alignItems: 'center',
     flexDirection: 'row',
     gap: 14,
+  },
+  avatar: {
+    backgroundColor: '#B7BAF8',
+  },
+  avatarLabel: {
+    color: '#23244D',
+    fontWeight: '700',
   },
   heroText: {
     flex: 1,
   },
   parentName: {
+    color: '#23244D',
     fontWeight: '700',
   },
   parentMeta: {
-    color: '#64748B',
+    color: '#4D4FA0',
     marginTop: 2,
+  },
+  heroTags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 14,
   },
   sectionHeader: {
     marginBottom: 12,
   },
   sectionTitle: {
+    color: '#A1A1AA',
     fontWeight: '700',
   },
+  timelineCard: {
+    backgroundColor: '#1E1E1E',
+    borderColor: '#2D2D2D',
+    borderRadius: 16,
+    marginBottom: 14,
+  },
+  timelineContent: {
+    gap: 14,
+  },
+  timelineRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  timelineRail: {
+    alignItems: 'center',
+    width: 12,
+  },
+  timelineDot: {
+    backgroundColor: '#8B8DF1',
+    borderRadius: 99,
+    height: 8,
+    width: 8,
+  },
+  timelineDotSecondary: {
+    backgroundColor: '#D4F4E4',
+  },
+  timelineLine: {
+    backgroundColor: '#2D2D2D',
+    flex: 1,
+    marginVertical: 4,
+    width: 1,
+  },
+  timelineTextBlock: {
+    flex: 1,
+    paddingBottom: 2,
+  },
+  timelineTitle: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  timelineDescription: {
+    color: '#A1A1AA',
+    lineHeight: 18,
+    marginTop: 3,
+  },
   alertCard: {
-    marginTop: 'auto',
+    backgroundColor: '#1E1E1E',
+    borderColor: '#2D2D2D',
+    borderRadius: 16,
+  },
+  alertContent: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+  },
+  alertText: {
+    flex: 1,
   },
   alertTitle: {
+    color: '#FFFFFF',
     fontWeight: '700',
   },
   alertSubtitle: {
-    color: '#475569',
+    color: '#A1A1AA',
     marginTop: 4,
   },
 });

@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Text } from 'react-native-paper';
 
 import { ApprovalCard } from '@/components/approval-card';
+import { ScreenShell } from '@/components/screen-shell';
 import { approvals, type ApprovalStatus } from '@/data/dummy';
 
 export default function ApprovalsScreen() {
@@ -19,17 +20,17 @@ export default function ApprovalsScreen() {
   const completedItems = approvalItems.filter((item) => item.status !== 'pending');
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScreenShell>
       <Text variant="headlineSmall" style={styles.title}>
         Approvals
       </Text>
       <Text variant="bodyMedium" style={styles.subtitle}>
-        Review requests before the assistant completes sensitive actions.
+        Actions waiting for your OK.
       </Text>
 
       <View style={styles.section}>
         <Text variant="titleMedium" style={styles.sectionTitle}>
-          Pending
+          Pending | {pendingItems.length}
         </Text>
         {pendingItems.length > 0 ? (
           pendingItems.map((item) => (
@@ -50,20 +51,17 @@ export default function ApprovalsScreen() {
           <ApprovalCard key={item.id} item={item} />
         ))}
       </View>
-    </ScrollView>
+    </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: '#F8FAFC',
-    padding: 20,
-  },
   title: {
+    color: '#FFFFFF',
     fontWeight: '700',
   },
   subtitle: {
-    color: '#475569',
+    color: '#A1A1AA',
     marginBottom: 20,
     marginTop: 6,
   },
@@ -71,10 +69,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: {
+    color: '#A1A1AA',
+    fontSize: 12,
     fontWeight: '700',
+    letterSpacing: 0.4,
     marginBottom: 12,
+    textTransform: 'uppercase',
   },
   emptyState: {
-    color: '#64748B',
+    color: '#A1A1AA',
   },
 });
