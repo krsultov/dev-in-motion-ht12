@@ -1,16 +1,8 @@
 'use client'
 
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
-} from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 
-const data = [
+const data7 = [
   { day: 'Mon', calls: 310 },
   { day: 'Tue', calls: 370 },
   { day: 'Wed', calls: 290 },
@@ -18,6 +10,33 @@ const data = [
   { day: 'Fri', calls: 340 },
   { day: 'Sat', calls: 270 },
   { day: 'Sun', calls: 510 },
+]
+
+const data14 = [
+  { day: 'M', calls: 298 },
+  { day: 'T', calls: 344 },
+  { day: 'W', calls: 310 },
+  { day: 'T', calls: 390 },
+  { day: 'F', calls: 325 },
+  { day: 'S', calls: 252 },
+  { day: 'S', calls: 481 },
+  { day: 'M', calls: 310 },
+  { day: 'T', calls: 370 },
+  { day: 'W', calls: 290 },
+  { day: 'T', calls: 420 },
+  { day: 'F', calls: 340 },
+  { day: 'S', calls: 270 },
+  { day: 'S', calls: 510 },
+]
+
+const data30 = [
+  { day: '1 Mar', calls: 1840 },
+  { day: '5 Mar', calls: 2100 },
+  { day: '10 Mar', calls: 1950 },
+  { day: '15 Mar', calls: 2380 },
+  { day: '20 Mar', calls: 2210 },
+  { day: '25 Mar', calls: 2050 },
+  { day: '30 Mar', calls: 2420 },
 ]
 
 function CustomTooltip({ active, payload, label }: any) {
@@ -32,12 +51,23 @@ function CustomTooltip({ active, payload, label }: any) {
   return null
 }
 
-export function CallsPerDayChart() {
+export function CallsPerDayChart({ range }: { range: string }) {
+  let data = data7
+  let subtitle = 'Last 7 days · all users'
+
+  if (range === '14') {
+    data = data14
+    subtitle = 'Last 14 days · all users'
+  } else if (range === '30') {
+    data = data30
+    subtitle = 'Last 30 days · weekly totals'
+  }
+
   return (
     <div className="bg-[#27272a] rounded-2xl p-5 border border-zinc-800 flex flex-col h-full">
       <div className="mb-4">
         <h3 className="text-white font-semibold text-base">Calls per day</h3>
-        <p className="text-zinc-500 text-sm">Last 7 days · all users</p>
+        <p className="text-zinc-500 text-sm">{subtitle}</p>
       </div>
       <div className="flex-1" style={{ minHeight: 200 }}>
         <ResponsiveContainer width="100%" height={220}>
@@ -52,10 +82,10 @@ export function CallsPerDayChart() {
             <YAxis hide />
             <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(124,115,230,0.08)' }} />
             <Bar dataKey="calls" radius={[6, 6, 6, 6]}>
-              {data.map((entry) => (
+              {data.map((entry, i) => (
                 <Cell
-                  key={entry.day}
-                  fill={entry.day === 'Sun' ? '#7c73e6' : '#4a4580'}
+                  key={`${entry.day}-${i}`}
+                  fill={i === data.length - 1 ? '#7c73e6' : '#4a4580'}
                 />
               ))}
             </Bar>
