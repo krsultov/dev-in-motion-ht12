@@ -17,3 +17,15 @@ export interface GetCalendarEventsParams {
   startDate?: string;
   endDate?: string;
 }
+
+export interface UpdateCalendarEventParams {
+  id: string;
+  title?: string;
+  startTime?: string;
+  endTime?: string;
+  description?: string;
+}
+
+export interface DeleteCalendarEventParams {
+  id: string;
+}

@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import type { CalendarEvent, AddCalendarEventParams, GetCalendarEventsParams } from './types.js';
+import type { CalendarEvent, AddCalendarEventParams, GetCalendarEventsParams, UpdateCalendarEventParams, DeleteCalendarEventParams } from './types.js';
 
 // In-memory store for calendar events
 const eventsStore: CalendarEvent[] = [];
@@ -31,4 +31,32 @@ export function getEvents(params: GetCalendarEventsParams): CalendarEvent[] {
   }
   
   return filteredEvents;
+}
+
+export function updateEvent(params: UpdateCalendarEventParams): CalendarEvent {
+  const index = eventsStore.findIndex(e => e.id === params.id);
+  if (index === -1) {
+    throw new Error(`Event with ID ${params.id} not found`);
+  }
+  
+  const existingEvent = eventsStore[index];
+  const updatedEvent: CalendarEvent = {
+    ...existingEvent,
+    title: params.title ?? existingEvent.title,
+    startTime: params.startTime ?? existingEvent.startTime,
+    endTime: params.endTime ?? existingEvent.endTime,
+    description: params.description ?? existingEvent.description,
+  };
+  
+  eventsStore[index] = updatedEvent;
+  return updatedEvent;
+}
+
+export function deleteEvent(params: DeleteCalendarEventParams): void {
+  const index = eventsStore.findIndex(e => e.id === params.id);
+  if (index === -1) {
+    throw new Error(`Event with ID ${params.id} not found`);
+  }
+  
+  eventsStore.splice(index, 1);
 }

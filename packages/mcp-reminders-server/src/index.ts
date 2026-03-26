@@ -46,6 +46,32 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           },
         },
       },
+      {
+        name: "update_calendar_event",
+        description: "Update an existing calendar event",
+        inputSchema: {
+          type: "object",
+          properties: {
+            id: { type: "string" },
+            title: { type: "string" },
+            startTime: { type: "string", description: "ISO string format" },
+            endTime: { type: "string", description: "ISO string format" },
+            description: { type: "string" },
+          },
+          required: ["id"],
+        },
+      },
+      {
+        name: "delete_calendar_event",
+        description: "Delete a calendar event",
+        inputSchema: {
+          type: "object",
+          properties: {
+            id: { type: "string" },
+          },
+          required: ["id"],
+        },
+      },
     ],
   };
 });
@@ -80,6 +106,40 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         {
           type: "text",
           text: JSON.stringify(events, null, 2),
+        },
+      ],
+    };
+  }
+
+  if (request.params.name === "update_calendar_event") {
+    const args = request.params.arguments as any;
+    const event = CalendarService.updateEvent({
+      id: args.id,
+      title: args.title,
+      startTime: args.startTime,
+      endTime: args.endTime,
+      description: args.description,
+    });
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Event updated successfully: ${JSON.stringify(event)}`,
+        },
+      ],
+    };
+  }
+
+  if (request.params.name === "delete_calendar_event") {
+    const args = request.params.arguments as any;
+    CalendarService.deleteEvent({
+      id: args.id,
+    });
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Event with ID ${args.id} deleted successfully`,
         },
       ],
     };
