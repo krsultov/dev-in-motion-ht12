@@ -3,10 +3,15 @@
   "version": "0.0.1",
   "private": true,
   "description": "Scheduler, outbound call jobs",
-  "main": "src/index.ts",
+  "type": "module",
+  "main": "dist/index.js",
   "scripts": {
-    "build": "echo 'TODO: setup build script'",
+    "build": "tsc",
     "lint": "echo 'TODO: setup lint'",
-    "typecheck": "echo 'TODO: setup typecheck'"
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0"
   }
 }
