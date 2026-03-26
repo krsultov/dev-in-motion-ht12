@@ -26,3 +26,31 @@ export type Approval = {
   requestedAt: string;
   resolvedAt: string | null;
 };
+
+export type Medication = {
+  id: string;
+  name: string;
+  schedule: string;
+  updatedAt: string;
+};
+
+export type MemoryContact = {
+  id: string;
+  name: string;
+  role: string;
+  phone: string;
+  updatedAt: string;
+};
+
+export type Preference = {
+  id: string;
+  label: string;
+  value: string;
+  updatedAt: string;
+};
+
+export type MemoryData = {
+  medications: Medication[];
+  contacts: MemoryContact[];
+  preferences: Preference[];
+};

@@ -1,3 +1,4 @@
+import { ReactNode } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 import { IconButton, Surface, Text } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,6 +15,7 @@ type MemorySectionCardProps = {
   iconName: keyof typeof Ionicons.glyphMap;
   accentColor: string;
   rows: MemoryRow[];
+  content?: ReactNode;
 };
 
 export function MemorySectionCard({
@@ -21,6 +23,7 @@ export function MemorySectionCard({
   iconName,
   accentColor,
   rows,
+  content,
 }: MemorySectionCardProps) {
   return (
     <Surface style={styles.card} elevation={1}>
@@ -34,21 +37,24 @@ export function MemorySectionCard({
         />
       </View>
 
-      {rows.map((row, index) => (
-        <View key={row.id} style={[styles.row, index === rows.length - 1 ? styles.lastRow : null]}>
-          <View style={[styles.iconBadge, { backgroundColor: row.iconColor ?? accentColor }]}>
-            <Ionicons name={iconName} size={16} color="#FFFFFF" />
+      {content ??
+        rows.map((row, index) => (
+          <View
+            key={row.id}
+            style={[styles.row, index === rows.length - 1 ? styles.lastRow : null]}>
+            <View style={[styles.iconBadge, { backgroundColor: row.iconColor ?? accentColor }]}>
+              <Ionicons name={iconName} size={16} color="#FFFFFF" />
+            </View>
+            <View style={styles.rowText}>
+              <Text variant="bodyLarge" style={styles.primary}>
+                {row.label}
+              </Text>
+              <Text variant="bodySmall" style={styles.secondary}>
+                {row.detail}
+              </Text>
+            </View>
           </View>
-          <View style={styles.rowText}>
-            <Text variant="bodyLarge" style={styles.primary}>
-              {row.label}
-            </Text>
-            <Text variant="bodySmall" style={styles.secondary}>
-              {row.detail}
-            </Text>
-          </View>
-        </View>
-      ))}
+        ))}
     </Surface>
   );
 }

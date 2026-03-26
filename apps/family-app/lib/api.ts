@@ -1,3 +1,5 @@
+import type { Preference } from '@/types/api';
+
 export type ApiErrorCode =
   | 'UNAUTHORIZED'
   | 'FORBIDDEN'
@@ -53,4 +55,17 @@ export async function apiFetch<T>(
   }
 
   return json as T;
+}
+
+// TODO: wire to edit UI
+export async function updateMemoryEntry(
+  parentId: string,
+  memoryId: string,
+  value: string,
+  token: string,
+): Promise<Preference> {
+  return apiFetch<Preference>(`/parent/${parentId}/memory/${memoryId}`, token, {
+    method: 'PATCH',
+    body: JSON.stringify({ value }),
+  });
 }
