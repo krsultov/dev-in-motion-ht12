@@ -2,11 +2,25 @@
   "name": "@nelson/voice-gateway",
   "version": "0.0.1",
   "private": true,
+  "type": "module",
+  "main": "dist/index.js",
   "description": "Call entrypoint, STT/TTS pipeline — Hono.js",
   "scripts": {
-    "dev": "echo 'TODO: setup dev script'",
-    "build": "echo 'TODO: setup build script'",
+    "dev": "npx tsx --watch src/index.ts",
+    "build": "tsc",
     "lint": "echo 'TODO: setup lint'",
-    "typecheck": "echo 'TODO: setup typecheck'"
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "hono": "^4.7.0",
+    "@hono/node-server": "^1.14.0",
+    "@hono/node-ws": "^1.1.0",
+    "ws": "^8.18.0",
+    "dotenv": "^16.4.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "@types/node": "^22.0.0",
+    "@types/ws": "^8.5.0"
   }
 }
