@@ -1,14 +1,20 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Text } from 'react-native-paper';
+import { ActivityIndicator, Text } from 'react-native-paper';
 
 import { ApprovalCard } from '@/components/approval-card';
 import { ScreenShell } from '@/components/screen-shell';
-import { approvals, type ApprovalStatus } from '@/data/dummy';
+import { useApprovalFeed } from '@/hooks/useApprovalFeed';
+import type { Approval, ApprovalStatus } from '@/types/api';
 
 export default function ApprovalsScreen() {
   // This screen renders pending approval actions and lets the user resolve them locally.
-  const [approvalItems, setApprovalItems] = useState(approvals);
+  const { items, isLoading, isError } = useApprovalFeed();
+  const [approvalItems, setApprovalItems] = useState<Approval[]>([]);
+
+  useEffect(() => {
+    setApprovalItems(items);
+  }, [items]);
 
   const handleUpdateStatus = (id: string, status: ApprovalStatus) => {
     setApprovalItems((current) =>
@@ -32,7 +38,13 @@ export default function ApprovalsScreen() {
         <Text variant="titleMedium" style={styles.sectionTitle}>
           Pending | {pendingItems.length}
         </Text>
-        {pendingItems.length > 0 ? (
+        {isLoading ? (
+          <ActivityIndicator size="small" color="#8B8DF1" />
+        ) : isError ? (
+          <Text variant="bodyMedium" style={styles.emptyState}>
+            Could not load data
+          </Text>
+        ) : pendingItems.length > 0 ? (
           pendingItems.map((item) => (
             <ApprovalCard key={item.id} item={item} onUpdateStatus={handleUpdateStatus} />
           ))
@@ -47,9 +59,19 @@ export default function ApprovalsScreen() {
         <Text variant="titleMedium" style={styles.sectionTitle}>
           Completed
         </Text>
-        {completedItems.map((item) => (
-          <ApprovalCard key={item.id} item={item} />
-        ))}
+        {isLoading ? (
+          <ActivityIndicator size="small" color="#8B8DF1" />
+        ) : isError ? (
+          <Text variant="bodyMedium" style={styles.emptyState}>
+            Could not load data
+          </Text>
+        ) : completedItems.length > 0 ? (
+          completedItems.map((item) => <ApprovalCard key={item.id} item={item} />)
+        ) : (
+          <Text variant="bodyMedium" style={styles.emptyState}>
+            No completed approvals yet.
+          </Text>
+        )}
       </View>
     </ScreenShell>
   );

@@ -33,6 +33,8 @@ export type Approval = {
   resolvedAt: string | null;
 };
 
+export type ApprovalStatus = Approval['status'];
+
 export type Medication = {
   id: string;
   name: string;

@@ -1,4 +1,4 @@
-import type { ActivityResponse, Preference } from '@/types/api';
+import type { ActivityResponse, Approval, Preference } from '@/types/api';
 
 export type ApiErrorCode =
   | 'UNAUTHORIZED'
@@ -83,4 +83,23 @@ export async function fetchActivity(
   }
 
   return apiFetch<ActivityResponse>(`/parent/${parentId}/activity?${params.toString()}`, token);
+}
+
+export async function fetchApprovals(
+  parentId: string,
+  token: string,
+  status?: 'pending' | 'approved' | 'declined',
+): Promise<{ items: Approval[] }> {
+  const params = new URLSearchParams();
+
+  if (status) {
+    params.set('status', status);
+  }
+
+  const query = params.toString();
+
+  return apiFetch<{ items: Approval[] }>(
+    `/parent/${parentId}/approvals${query ? `?${query}` : ''}`,
+    token,
+  );
 }

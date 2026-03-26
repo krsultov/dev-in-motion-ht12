@@ -1,7 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import { Button, Card, Text } from 'react-native-paper';
 
-import type { Approval, ApprovalStatus } from '@/data/dummy';
+import type { Approval, ApprovalStatus } from '@/types/api';
 
 import { StatusTag } from './status-tag';
 
