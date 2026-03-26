@@ -33,30 +33,36 @@ export function ActivityCard({ item }: ActivityCardProps) {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: '#1E1E1E',
-    borderColor: '#2D2D2D',
-    borderRadius: 16,
-    marginBottom: 12,
+    borderColor: '#303038',
+    borderRadius: 18,
+    marginBottom: 14,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
   },
   content: {
-    gap: 10,
+    gap: 12,
   },
   headerRow: {
     alignItems: 'flex-start',
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
+    justifyContent: 'space-between',
   },
   title: {
     color: '#FFFFFF',
     flexGrow: 1,
     flexShrink: 1,
     fontWeight: '700',
+    lineHeight: 22,
   },
   description: {
     color: '#A1A1AA',
     lineHeight: 20,
   },
   timestamp: {
-    color: '#A1A1AA',
+    color: '#8A8A96',
   },
 });

@@ -101,23 +101,30 @@ const styles = StyleSheet.create({
   title: {
     color: '#FFFFFF',
     fontWeight: '700',
+    letterSpacing: -0.3,
   },
   subtitle: {
     color: '#A1A1AA',
-    marginBottom: 20,
-    marginTop: 6,
+    lineHeight: 21,
+    marginBottom: 24,
+    marginTop: 8,
+    maxWidth: 320,
   },
   heroCard: {
     backgroundColor: '#CDCFFC',
     borderColor: '#CDCFFC',
-    borderRadius: 18,
-    marginBottom: 22,
-    padding: 18,
+    borderRadius: 22,
+    marginBottom: 26,
+    padding: 20,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.14,
+    shadowRadius: 20,
   },
   heroTopRow: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: 14,
+    gap: 16,
   },
   avatar: {
     backgroundColor: '#B7BAF8',
@@ -132,36 +139,39 @@ const styles = StyleSheet.create({
   parentName: {
     color: '#23244D',
     fontWeight: '700',
+    letterSpacing: -0.2,
   },
   parentMeta: {
     color: '#4D4FA0',
-    marginTop: 2,
+    marginTop: 4,
   },
   heroTags: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginTop: 14,
+    marginTop: 16,
   },
   sectionHeader: {
-    marginBottom: 12,
+    marginBottom: 14,
   },
   sectionTitle: {
     color: '#A1A1AA',
+    fontSize: 13,
     fontWeight: '700',
+    letterSpacing: 0.3,
   },
   timelineCard: {
     backgroundColor: '#1E1E1E',
-    borderColor: '#2D2D2D',
-    borderRadius: 16,
-    marginBottom: 14,
+    borderColor: '#303038',
+    borderRadius: 18,
+    marginBottom: 16,
   },
   timelineContent: {
-    gap: 14,
+    gap: 16,
   },
   timelineRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 12,
   },
   timelineRail: {
     alignItems: 'center',
@@ -189,21 +199,22 @@ const styles = StyleSheet.create({
   timelineTitle: {
     color: '#FFFFFF',
     fontWeight: '700',
+    lineHeight: 20,
   },
   timelineDescription: {
     color: '#A1A1AA',
     lineHeight: 18,
-    marginTop: 3,
+    marginTop: 4,
   },
   alertCard: {
     backgroundColor: '#1E1E1E',
-    borderColor: '#2D2D2D',
-    borderRadius: 16,
+    borderColor: '#303038',
+    borderRadius: 18,
   },
   alertContent: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: 10,
+    gap: 12,
   },
   alertText: {
     flex: 1,
@@ -214,6 +225,7 @@ const styles = StyleSheet.create({
   },
   alertSubtitle: {
     color: '#A1A1AA',
+    lineHeight: 19,
     marginTop: 4,
   },
 });

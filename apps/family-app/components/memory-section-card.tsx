@@ -56,17 +56,21 @@ export function MemorySectionCard({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: '#1E1E1E',
-    borderColor: '#2D2D2D',
-    borderRadius: 16,
-    gap: 12,
-    marginBottom: 16,
-    padding: 16,
+    borderColor: '#303038',
+    borderRadius: 18,
+    gap: 14,
+    marginBottom: 18,
+    padding: 18,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
   },
   headerRow: {
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   title: {
     color: '#FFFFFF',
@@ -74,11 +78,12 @@ const styles = StyleSheet.create({
   },
   row: {
     alignItems: 'flex-start',
-    borderBottomColor: '#2D2D2D',
+    borderBottomColor: '#2B2B31',
     borderBottomWidth: 1,
     flexDirection: 'row',
     gap: 12,
-    paddingBottom: 10,
+    paddingBottom: 12,
+    paddingTop: 2,
   },
   lastRow: {
     borderBottomWidth: 0,
@@ -86,10 +91,11 @@ const styles = StyleSheet.create({
   },
   iconBadge: {
     alignItems: 'center',
-    borderRadius: 10,
-    height: 32,
+    borderRadius: 12,
+    height: 36,
     justifyContent: 'center',
-    width: 32,
+    marginTop: 1,
+    width: 36,
   },
   rowText: {
     flex: 1,
@@ -97,10 +103,11 @@ const styles = StyleSheet.create({
   primary: {
     color: '#FFFFFF',
     fontWeight: '600',
+    lineHeight: 21,
   },
   secondary: {
     color: '#A1A1AA',
     lineHeight: 18,
-    marginTop: 2,
+    marginTop: 3,
   },
 });

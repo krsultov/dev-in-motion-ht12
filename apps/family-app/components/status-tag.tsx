@@ -35,10 +35,12 @@ const styles = StyleSheet.create({
   chip: {
     alignSelf: 'flex-start',
     backgroundColor: '#2D2D2D',
-    height: 30,
+    borderRadius: 999,
+    height: 32,
   },
   text: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
+    letterSpacing: 0.2,
   },
 });

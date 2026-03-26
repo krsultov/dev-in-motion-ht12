@@ -65,16 +65,21 @@ export function ApprovalCard({ item, onUpdateStatus }: ApprovalCardProps) {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: '#1E1E1E',
-    borderColor: '#2D2D2D',
-    borderRadius: 16,
-    marginBottom: 12,
+    borderColor: '#303038',
+    borderRadius: 18,
+    marginBottom: 14,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
   },
   completedCard: {
     backgroundColor: '#171717',
-    opacity: 0.9,
+    borderColor: '#26262C',
+    opacity: 0.92,
   },
   content: {
-    gap: 12,
+    gap: 14,
   },
   headerRow: {
     alignItems: 'flex-start',
@@ -91,6 +96,7 @@ const styles = StyleSheet.create({
   title: {
     color: '#FFFFFF',
     fontWeight: '700',
+    lineHeight: 22,
   },
   description: {
     color: '#A1A1AA',
@@ -108,24 +114,30 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   requestedAt: {
-    color: '#A1A1AA',
+    color: '#8A8A96',
   },
   actions: {
     flexDirection: 'row',
     gap: 12,
-    marginTop: 2,
+    marginTop: 4,
   },
   actionButton: {
+    borderRadius: 14,
     flex: 1,
   },
   actionLabel: {
     color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
   approveButton: {
+    backgroundColor: '#232325',
     borderColor: '#D4F4E4',
     borderWidth: 1,
   },
   declineButton: {
+    backgroundColor: '#1B1B1D',
     borderColor: '#F9D4D4',
   },
 });
