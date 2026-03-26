@@ -54,6 +54,29 @@ export type Approval = {
   requestedAt: string;
 };
 
+export type ElderProfile = {
+  name: string;
+  age: number;
+  city: string;
+  bio: string;
+  primaryLanguage: string;
+  livingSituation: string;
+  relationshipToUser: string;
+};
+
+export type NotificationPreference = {
+  id: string;
+  label: string;
+  enabled: boolean;
+};
+
+export type FamilyAccountProfile = {
+  name: string;
+  relationshipLabel: string;
+  permissionLevel: string;
+  notificationPreferences: NotificationPreference[];
+};
+
 export const parentProfile: ParentProfile = {
   name: 'Maria Angelova',
   initials: 'МА',
@@ -112,6 +135,27 @@ export const activityItems: ActivityItem[] = [
     day: 'Yesterday',
   },
 ];
+
+export const elderProfile: ElderProfile = {
+  name: 'Maria Angelova',
+  age: 74,
+  city: 'Sofia',
+  bio: 'Retired literature teacher who enjoys morning walks, family calls, and keeping a steady daily routine.',
+  primaryLanguage: 'Bulgarian',
+  livingSituation: 'Lives alone',
+  relationshipToUser: 'Mother',
+};
+
+export const familyAccountProfile: FamilyAccountProfile = {
+  name: 'Ivan Angelov',
+  relationshipLabel: 'Son',
+  permissionLevel: 'Full Access',
+  notificationPreferences: [
+    { id: 'purchases', label: 'Purchases', enabled: true },
+    { id: 'wellness-alerts', label: 'Wellness Alerts', enabled: true },
+    { id: 'unusual-activity', label: 'Unusual Activity', enabled: false },
+  ],
+};
 
 export const memoryData: MemoryData = {
   medications: [
