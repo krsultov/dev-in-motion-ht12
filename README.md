@@ -80,6 +80,7 @@ Nelson is a **voice-first AI agent platform** with three layers:
 
 ## 🏗️ Architecture
 
+<<<<<<< Updated upstream
 ```
 Phone Call (any device)
     │
@@ -103,6 +104,9 @@ Event stored in DB
     ├──▶ Family App (realtime)
     └──▶ Ops Dashboard (realtime)
 ```
+=======
+<img width="1536" height="1024" alt="image" src="https://github.com/user-attachments/assets/86c4b470-c86e-4cf8-9e08-e769fa5e6243" />
+>>>>>>> Stashed changes
 
 ---
 
@@ -118,22 +122,13 @@ nelson/
 │
 ├─ packages/
 │  ├─ agent-core/           # LLM orchestration, prompt, tool calling
-│  ├─ mcp-memory-server/    # MCP server: user profile + memory CRUD
-│  ├─ mcp-reminders-server/ # MCP server: reminder scheduling + callbacks
-│  ├─ memory-domain/        # User profile, retrieval, privacy rules
+│  ├─ mcp/    # MCP servers
 │  ├─ reminders-domain/     # Scheduler, outbound call jobs
-│  ├─ shared-types/         # Zod schemas: UserProfile, CallSession, MemoryItem, Reminder
-│  ├─ shared-ui/            # Reusable React/Expo UI components
-│  ├─ db/                   # Prisma schema + migrations
-│  ├─ clients/              # OpenAI, ElevenLabs, Whisper, Voice SDK wrappers
-│  └─ config/               # tsconfig, eslint, env helpers
+│  ├─ api/     # APIs for MCP servers
+│  ├─ shared-types/         # Zod schemas
+│  ├─ db/                   # MongoDB pool
 │
-├─ infra/
-│  ├─ docker/
-│  ├─ scripts/
-│  └─ deployment/
-│
-├─ package.json
+├─ Dockerfile
 └─ README.md                ← you are here
 ```
 
@@ -148,11 +143,8 @@ nelson/
 | Mobile + Web App | Expo (React Native) |
 | Operator Dashboard | Next.js |
 | API | Hono.js |
-| Database | PostgreSQL + pgvector or Mongo/RAG stuff |
-| Speech to Text | OpenAI Whisper large-v3 (Bulgarian) |
-| Text to Speech | ElevenLabs (Bulgarian voice) |
-| Telephony | ? |
-| Bulgarian number | ? |
+| Database | MongoDB / custom RAG implementation |
+| Telephony | Twilio |
 | Agent tool protocol | Model Context Protocol (MCP) |
 | Realtime | WebSockets |
 
