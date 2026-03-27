@@ -3,13 +3,15 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Avatar, Card, Surface, Text } from 'react-native-paper';
 
+import { HomeMonthCalendar } from '@/components/home-month-calendar';
 import { ScreenShell } from '@/components/screen-shell';
 import { StatusTag } from '@/components/status-tag';
-import { activityItems, approvals, parentProfile } from '@/data/dummy';
+import { useAuth } from '@/context/auth-context';
+import { activityItems, approvals, calendarMonthActivities, parentProfile } from '@/data/dummy';
 
 export default function HomeScreen() {
-  // This screen renders the family dashboard summary with profile, recent activity, and approval count.
   const router = useRouter();
+  const { user } = useAuth();
   const recentItems = activityItems.slice(0, 2);
   const pendingCount = approvals.filter((item) => item.status === 'pending').length;
   const todayCount = activityItems.filter((item) => item.day === 'Today').length;
@@ -17,7 +19,7 @@ export default function HomeScreen() {
   return (
     <ScreenShell>
       <Text variant="headlineSmall" style={styles.title}>
-        Good morning, Ivan
+        Good morning, {user?.name ?? 'Family'}
       </Text>
       <Text variant="bodyMedium" style={styles.subtitle}>
         Your mother&apos;s assistant is active and keeping things on track.
@@ -93,6 +95,8 @@ export default function HomeScreen() {
           <Ionicons name="chevron-forward" size={18} color="#7C7893" />
         </Card.Content>
       </Card>
+
+      <HomeMonthCalendar activities={calendarMonthActivities} />
     </ScreenShell>
   );
 }
