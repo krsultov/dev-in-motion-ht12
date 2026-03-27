@@ -257,6 +257,28 @@ async function registerUser(userId: string, name: string): Promise<string> {
 const app = new Hono();
 const { injectWebSocket, upgradeWebSocket } = createNodeWebSocket({ app });
 
+// Twilio webhook for outbound reminder calls — returns TwiML to connect to media stream with reminder context
+app.post("/reminder-callback", async (c) => {
+  const url = new URL(c.req.url);
+  const reminderId = url.searchParams.get("reminderId") ?? "";
+  const callerPhone = url.searchParams.get("callerPhone") ?? "unknown";
+  const reminderTitle = url.searchParams.get("reminderTitle") ?? "";
+  console.log(`Reminder callback: ${reminderId} for ${callerPhone} — "${reminderTitle}"`);
+
+  const host = c.req.header("Host") ?? "localhost:3000";
+  const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Connect>
+    <Stream url="wss://${host}/media-stream">
+      <Parameter name="callerPhone" value="${callerPhone}"/>
+      <Parameter name="reminderId" value="${reminderId}"/>
+      <Parameter name="reminderTitle" value="${reminderTitle}"/>
+    </Stream>
+  </Connect>
+</Response>`;
+  return c.text(twiml, 200, { "Content-Type": "text/xml" });
+});
+
 // Twilio webhook — returns TwiML to connect the call to a media stream
 app.post("/incoming-call", async (c) => {
   const body = await c.req.parseBody();
@@ -280,11 +302,41 @@ app.get(
   "/media-stream",
   upgradeWebSocket((c) => {
     let callerPhone = "unknown";
+    let reminderId: string | null = null;
+    let reminderTitle: string | null = null;
 
     let openaiWs: WebSocket | null = null;
     let streamSid: string | null = null;
     let lastAssistantItemId: string | null = null;
     const markQueue: string[] = [];
+
+    function getInstructions(): string {
+      if (reminderId && reminderTitle) {
+        return `You are Nelson, a warm, patient, and reliable AI voice assistant designed specifically for elderly people in Bulgaria. You are making an OUTBOUND call to remind the user about something.
+
+CORE RULES:
+1. LANGUAGE: You must speak ONLY in natural, fluent Bulgarian. Use the polite/respectful form ("Вие").
+2. BREVITY (CRITICAL): Keep your responses extremely short—ideally 1 to 2 short sentences.
+3. TONE: Be compassionate, reassuring, and clear. Act like a trusted family friend. Never use technical jargon.
+4. NO FORMATTING: Never use markdown, asterisks (*), hashtags (#), or bullet points.
+
+THIS IS A REMINDER CALL:
+- You are calling the user to remind them about: "${reminderTitle}"
+- Start the call by greeting them and immediately telling them the reminder: "Здравейте! Обаждам се да ви напомня: ${reminderTitle}."
+- After delivering the reminder, ask if they need anything else.
+- If they don't need anything, say goodbye warmly and end naturally.
+- Keep the call short — the purpose is just the reminder.
+
+YOUR CAPABILITIES & TOOLS:
+- PROFILE: Use "get_user_profile" to load the caller's name and personalize the greeting.
+- REMINDERS: If they ask for a new reminder during the call, use "create_reminder".
+- MEMORY: If they tell you a fact, use "save_memory".
+- WEB SEARCH: If they ask a factual question, use "web_search".
+
+IMPORTANT: The caller is on a phone and CANNOT visit websites. Always give complete answers.`;
+      }
+      return SYSTEM_INSTRUCTIONS;
+    }
 
     function openOpenAI(twilioWs: { send: (data: string) => void }) {
       const ws = new WebSocket(
@@ -315,7 +367,7 @@ app.get(
                   voice: "cedar",
                 },
               },
-              instructions: SYSTEM_INSTRUCTIONS,
+              instructions: getInstructions(),
               tools: TOOLS,
             },
           })
@@ -457,7 +509,9 @@ app.get(
           case "start":
             streamSid = msg.start.streamSid;
             callerPhone = msg.start.customParameters?.callerPhone ?? "unknown";
-            console.log(`Stream started: ${streamSid}, caller: ${callerPhone}`);
+            reminderId = msg.start.customParameters?.reminderId ?? null;
+            reminderTitle = msg.start.customParameters?.reminderTitle ?? null;
+            console.log(`Stream started: ${streamSid}, caller: ${callerPhone}${reminderId ? `, reminder: ${reminderId}` : ""}`);
             break;
 
           case "media":

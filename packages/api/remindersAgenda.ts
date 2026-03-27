@@ -1,11 +1,59 @@
 import { Agenda } from "agenda";
 import { MongoBackend } from "@agendajs/mongo-backend";
-import type { ObjectId } from "mongodb";
+import { ObjectId } from "mongodb";
+import Twilio from "twilio";
 import { getDb } from "../db/src/index";
 
 declare const process: {
   env: Record<string, string | undefined>;
 };
+
+function getTwilioClient() {
+  const sid = process.env.TWILIO_ACCOUNT_SID;
+  const token = process.env.TWILIO_AUTH_TOKEN;
+  if (!sid || !token) {
+    console.warn("[Twilio] Missing TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN — outbound calls disabled");
+    return null;
+  }
+  return Twilio(sid, token);
+}
+
+async function placeReminderCall(reminderId: string): Promise<void> {
+  const client = getTwilioClient();
+  if (!client) return;
+
+  const twilioPhone = process.env.TWILIO_PHONE_NUMBER;
+  const voiceGatewayUrl = process.env.VOICE_GATEWAY_URL;
+  if (!twilioPhone || !voiceGatewayUrl) {
+    console.error("[Twilio] Missing TWILIO_PHONE_NUMBER or VOICE_GATEWAY_URL");
+    return;
+  }
+
+  const db = await getDb();
+  const collection = db.collection(process.env.REMINDERS_COLLECTION ?? "RemindersMemory");
+  const reminder = await collection.findOne({ _id: new ObjectId(reminderId) });
+  if (!reminder) {
+    console.error(`[Twilio] Reminder ${reminderId} not found — skipping call`);
+    return;
+  }
+
+  const userPhone = reminder.userId as string;
+  const title = reminder.title as string;
+  const callbackUrl = `${voiceGatewayUrl}/reminder-callback?reminderId=${encodeURIComponent(reminderId)}&callerPhone=${encodeURIComponent(userPhone)}&reminderTitle=${encodeURIComponent(title)}`;
+
+  try {
+    const call = await client.calls.create({
+      to: userPhone,
+      from: twilioPhone,
+      url: callbackUrl,
+      timeout: 30,
+      machineDetection: "Enable",
+    });
+    console.log(`[Twilio] Outbound call placed: ${call.sid} → ${userPhone} for reminder "${title}"`);
+  } catch (err) {
+    console.error(`[Twilio] Failed to place call to ${userPhone}:`, err);
+  }
+}
 
 
 export const REMINDER_JOB_CRON = "reminder cron due";
@@ -40,20 +88,14 @@ async function createAgenda(): Promise<Agenda> {
     const data = job.attrs.data as { reminderId?: string };
     const reminderId = data.reminderId ?? "";
     console.log(`[Agenda] Cron reminder fired: ${reminderId}`, job.attrs.name);
-    // TODO: Implement actual delivery — initiate a return call to the user via Twilio.
-    // 1. Look up the reminder by reminderId to get userId (phone) and title
-    // 2. Use Twilio API to place an outbound call to the user's phone
-    // 3. Connect the call to the voice gateway with a reminder context parameter
+    await placeReminderCall(reminderId);
   });
 
   agenda.define(REMINDER_JOB_START, async (job) => {
     const data = job.attrs.data as { reminderId?: string };
     const reminderId = data.reminderId ?? "";
     console.log(`[Agenda] Start reminder fired: ${reminderId}`, job.attrs.name);
-    // TODO: Implement actual delivery — initiate a return call to the user via Twilio.
-    // 1. Look up the reminder by reminderId to get userId (phone) and title
-    // 2. Use Twilio API to place an outbound call to the user's phone
-    // 3. Connect the call to the voice gateway with a reminder context parameter
+    await placeReminderCall(reminderId);
   });
 
   agenda.on("error", (err: Error) => {

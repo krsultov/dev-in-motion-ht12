@@ -46,6 +46,7 @@ services:
     env_file: .env
     environment:
       - REMINDERS_API_PORT=3004
+      - VOICE_GATEWAY_URL=${VOICE_GATEWAY_URL}
     restart: unless-stopped
 
   memory-mcp:
@@ -87,4 +88,13 @@ services:
     depends_on:
       - userdata-api
       - memory-api
+    restart: unless-stopped
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - voice-gateway
     restart: unless-stopped
