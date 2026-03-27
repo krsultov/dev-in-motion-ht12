@@ -1,24 +1,27 @@
-import { useEffect, useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
-import { Avatar, Card, Surface, Text } from 'react-native-paper';
+import { useEffect, useMemo, useState } from "react";
+import { StyleSheet, View } from "react-native";
+import { Avatar, Card, Surface, Text } from "react-native-paper";
 
-import { HomeMonthCalendar } from '@/components/home-month-calendar';
-import { ScreenShell } from '@/components/screen-shell';
-import { StatusTag } from '@/components/status-tag';
-import { useAuth } from '@/context/auth-context';
+import { HomeMonthCalendar } from "@/components/home-month-calendar";
+import { ScreenShell } from "@/components/screen-shell";
+import { StatusTag } from "@/components/status-tag";
+import { useAuth } from "@/context/auth-context";
 import {
   buildCalendarActivities,
+  buildDailySnapshot,
   buildElderProfile,
-  buildRecentActivity,
-} from '@/lib/dashboard-data';
-import { getCurrentUserMemory } from '@/lib/memory-api';
-import { listReminders } from '@/lib/reminders-api';
-import type { UserMemoryRecord } from '@/types/memory';
-import type { ReminderRecord } from '@/types/reminder';
+  buildUpcomingReminder,
+} from "@/lib/dashboard-data";
+import { getCurrentUserMemory } from "@/lib/memory-api";
+import { listReminders } from "@/lib/reminders-api";
+import type { UserMemoryRecord } from "@/types/memory";
+import type { ReminderRecord } from "@/types/reminder";
 
 export default function HomeScreen() {
   const { user } = useAuth();
-  const [memoryRecord, setMemoryRecord] = useState<UserMemoryRecord | null>(null);
+  const [memoryRecord, setMemoryRecord] = useState<UserMemoryRecord | null>(
+    null,
+  );
   const [reminders, setReminders] = useState<ReminderRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -30,7 +33,9 @@ export default function HomeScreen() {
       if (!user?.phone) {
         setMemoryRecord(null);
         setReminders([]);
-        setErrorMessage('Sign in with a phone number to load live dashboard data.');
+        setErrorMessage(
+          "Sign in with a phone number to load live dashboard data.",
+        );
         setIsLoading(false);
         return;
       }
@@ -50,29 +55,29 @@ export default function HomeScreen() {
 
         const nextErrors: string[] = [];
 
-        if (memoryResult.status === 'fulfilled') {
+        if (memoryResult.status === "fulfilled") {
           setMemoryRecord(memoryResult.value);
         } else {
           setMemoryRecord(null);
           nextErrors.push(
             memoryResult.reason instanceof Error
               ? `Memory: ${memoryResult.reason.message}`
-              : 'Memory data could not be loaded.',
+              : "Memory data could not be loaded.",
           );
         }
 
-        if (remindersResult.status === 'fulfilled') {
+        if (remindersResult.status === "fulfilled") {
           setReminders(remindersResult.value);
         } else {
           setReminders([]);
           nextErrors.push(
             remindersResult.reason instanceof Error
               ? `Reminders: ${remindersResult.reason.message}`
-              : 'Reminder data could not be loaded.',
+              : "Reminder data could not be loaded.",
           );
         }
 
-        setErrorMessage(nextErrors.length > 0 ? nextErrors.join(' ') : null);
+        setErrorMessage(nextErrors.length > 0 ? nextErrors.join(" ") : null);
       } catch (error) {
         if (!isMounted) {
           return;
@@ -80,7 +85,11 @@ export default function HomeScreen() {
 
         setMemoryRecord(null);
         setReminders([]);
-        setErrorMessage(error instanceof Error ? error.message : 'Unable to load dashboard data.');
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "Unable to load dashboard data.",
+        );
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -99,15 +108,23 @@ export default function HomeScreen() {
     () => buildElderProfile(memoryRecord, user?.phone ?? null),
     [memoryRecord, user?.phone],
   );
-  const calendarMonthActivities = useMemo(() => buildCalendarActivities(reminders), [reminders]);
-  const recentItems = useMemo(() => buildRecentActivity(reminders), [reminders]);
-  const todayKey = new Date().toISOString().slice(0, 10);
-  const todayCount = calendarMonthActivities.filter((item) => item.date === todayKey).length;
+  const calendarMonthActivities = useMemo(
+    () => buildCalendarActivities(reminders),
+    [reminders],
+  );
+  const dailySnapshot = useMemo(
+    () => buildDailySnapshot(memoryRecord, reminders),
+    [memoryRecord, reminders],
+  );
+  const upcomingReminder = useMemo(
+    () => buildUpcomingReminder(reminders),
+    [reminders],
+  );
 
   return (
     <ScreenShell>
       <Text variant="headlineSmall" style={styles.title}>
-        Good morning, {user?.name ?? 'Family'}
+        Good morning, {user?.name}
       </Text>
       <Text variant="bodyMedium" style={styles.subtitle}>
         Your mother&apos;s assistant is active and keeping things on track.
@@ -133,10 +150,17 @@ export default function HomeScreen() {
 
         <View style={styles.heroTags}>
           <StatusTag
-            label={elderProfile.aiActive ? 'AI active' : 'AI inactive'}
-            tone={elderProfile.aiActive ? 'approved' : 'declined'}
+            label={elderProfile.aiActive ? "AI active" : "AI inactive"}
+            tone={elderProfile.aiActive ? "approved" : "declined"}
           />
-          <StatusTag label={`${todayCount} reminders today`} tone="calendar" />
+          <View style={styles.heroPhoneRow}>
+            <Text variant="bodySmall" style={styles.heroFooterLabel}>
+              Linked phone
+            </Text>
+            <Text variant="bodyMedium" style={styles.heroFooterValue}>
+              {elderProfile.phone}
+            </Text>
+          </View>
         </View>
       </Surface>
 
@@ -162,145 +186,241 @@ export default function HomeScreen() {
 
       <View style={styles.sectionHeader}>
         <Text variant="titleMedium" style={styles.sectionTitle}>
-          Recent reminders
+          Daily snapshot
+        </Text>
+      </View>
+
+      <Card mode="outlined" style={styles.snapshotCard}>
+        <Card.Content style={styles.snapshotContent}>
+          {dailySnapshot.map((item) => (
+            <View key={item.id} style={styles.snapshotItem}>
+              <Text variant="bodySmall" style={styles.snapshotLabel}>
+                {item.label}
+              </Text>
+              <Text variant="titleMedium" style={styles.snapshotValue}>
+                {item.value}
+              </Text>
+            </View>
+          ))}
+        </Card.Content>
+      </Card>
+
+      <View style={styles.sectionHeader}>
+        <Text variant="titleMedium" style={styles.sectionTitle}>
+          Next up
         </Text>
       </View>
 
       <Card mode="outlined" style={styles.timelineCard}>
         <Card.Content style={styles.timelineContent}>
-          {recentItems.length > 0 ? (
-            recentItems.map((item, index) => (
-              <View key={item.id} style={styles.timelineRow}>
-                <View style={styles.timelineRail}>
-                  <View
-                    style={[styles.timelineDot, index === 1 ? styles.timelineDotSecondary : null]}
-                  />
-                  {index < recentItems.length - 1 ? <View style={styles.timelineLine} /> : null}
-                </View>
-                <View style={styles.timelineTextBlock}>
-                  <Text variant="titleSmall" style={styles.timelineTitle}>
-                    {item.title}
-                  </Text>
-                  <Text variant="bodySmall" style={styles.timelineDescription}>
-                    {item.description}
-                  </Text>
-                </View>
+          {upcomingReminder ? (
+            <View style={styles.nextUpBlock}>
+              <View style={styles.nextUpBadge}>
+                <Text variant="bodySmall" style={styles.nextUpBadgeText}>
+                  Upcoming reminder
+                </Text>
               </View>
-            ))
+              <Text variant="titleMedium" style={styles.nextUpTitle}>
+                {upcomingReminder.title}
+              </Text>
+              <Text variant="bodyMedium" style={styles.nextUpDetail}>
+                {upcomingReminder.detail}
+              </Text>
+              <Text variant="bodySmall" style={styles.timelineDescription}>
+                {upcomingReminder.description}
+              </Text>
+            </View>
           ) : (
             <Text variant="bodyMedium" style={styles.emptyText}>
-              No reminders yet.
+              No upcoming reminders yet.
             </Text>
           )}
         </Card.Content>
       </Card>
 
-      <HomeMonthCalendar activities={calendarMonthActivities} />
+      <HomeMonthCalendar reminders={calendarMonthActivities} />
     </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
   title: {
-    color: '#FFFFFF',
-    fontWeight: '700',
+    color: "#FFFFFF",
+    fontWeight: "700",
     letterSpacing: -0.3,
   },
   subtitle: {
-    color: '#A1A1AA',
+    color: "#A1A1AA",
     lineHeight: 21,
     marginBottom: 24,
     marginTop: 8,
     maxWidth: 320,
   },
   heroCard: {
-    backgroundColor: '#CDCFFC',
-    borderColor: '#CDCFFC',
+    backgroundColor: "#CDCFFC",
+    borderColor: "#CDCFFC",
     borderRadius: 22,
     marginBottom: 26,
     padding: 20,
-    shadowColor: '#000000',
+    shadowColor: "#000000",
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.14,
     shadowRadius: 20,
   },
   heroTopRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
+    alignItems: "center",
+    flexDirection: "row",
     gap: 16,
   },
   avatar: {
-    backgroundColor: '#B7BAF8',
+    backgroundColor: "#B7BAF8",
   },
   avatarLabel: {
-    color: '#23244D',
-    fontWeight: '700',
+    color: "#23244D",
+    fontWeight: "700",
   },
   heroText: {
     flex: 1,
   },
   parentName: {
-    color: '#23244D',
-    fontWeight: '700',
+    color: "#23244D",
+    fontWeight: "700",
     letterSpacing: -0.2,
   },
   parentMeta: {
-    color: '#4D4FA0',
+    color: "#4D4FA0",
     marginTop: 4,
   },
   heroTags: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    alignItems: "center",
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
+    justifyContent: "space-between",
     marginTop: 16,
+  },
+  heroPhoneRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    justifyContent: "flex-end",
+    marginLeft: 12,
+  },
+  heroFooterLabel: {
+    color: "#4D4FA0",
+    letterSpacing: 0.3,
+    textTransform: "uppercase",
+  },
+  heroFooterValue: {
+    color: "#23244D",
+    fontWeight: "600",
+    marginLeft: 2,
   },
   sectionHeader: {
     marginBottom: 14,
   },
   stateCard: {
-    backgroundColor: '#1E1E1E',
-    borderColor: '#303038',
+    backgroundColor: "#1E1E1E",
+    borderColor: "#303038",
     borderRadius: 18,
     marginBottom: 18,
   },
   stateText: {
-    color: '#A1A1AA',
+    color: "#A1A1AA",
     lineHeight: 20,
   },
   sectionTitle: {
-    color: '#A1A1AA',
+    color: "#A1A1AA",
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 0.3,
   },
   timelineCard: {
-    backgroundColor: '#1E1E1E',
-    borderColor: '#303038',
+    backgroundColor: "#1E1E1E",
+    borderColor: "#303038",
     borderRadius: 18,
     marginBottom: 16,
+  },
+  snapshotCard: {
+    backgroundColor: "#1E1E1E",
+    borderColor: "#303038",
+    borderRadius: 18,
+    marginBottom: 18,
+  },
+  snapshotContent: {
+    flexDirection: "row",
+    gap: 12,
+    justifyContent: "space-between",
+  },
+  snapshotItem: {
+    backgroundColor: "#171717",
+    borderColor: "#2D2D2D",
+    borderRadius: 16,
+    borderWidth: 1,
+    flex: 1,
+    minHeight: 98,
+    padding: 14,
+    justifyContent: "space-between",
+  },
+  snapshotLabel: {
+    textAlign: "center",
+    color: "#8A8A96",
+    lineHeight: 16,
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
+  },
+  snapshotValue: {
+    textAlign: "center",
+    color: "#FFFFFF",
+    fontWeight: "700",
+    lineHeight: 30,
   },
   timelineContent: {
     gap: 16,
   },
+  nextUpBlock: {
+    gap: 10,
+  },
+  nextUpBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: "#23244D",
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  nextUpBadgeText: {
+    color: "#CDCFFC",
+    fontWeight: "700",
+    letterSpacing: 0.2,
+  },
+  nextUpTitle: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
+  nextUpDetail: {
+    color: "#D4F4E4",
+    fontWeight: "600",
+  },
   timelineRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
   },
   timelineRail: {
-    alignItems: 'center',
+    alignItems: "center",
     width: 12,
   },
   timelineDot: {
-    backgroundColor: '#8B8DF1',
+    backgroundColor: "#8B8DF1",
     borderRadius: 99,
     height: 8,
     width: 8,
   },
   timelineDotSecondary: {
-    backgroundColor: '#D4F4E4',
+    backgroundColor: "#D4F4E4",
   },
   timelineLine: {
-    backgroundColor: '#2D2D2D',
+    backgroundColor: "#2D2D2D",
     flex: 1,
     marginVertical: 4,
     width: 1,
@@ -310,17 +430,17 @@ const styles = StyleSheet.create({
     paddingBottom: 2,
   },
   timelineTitle: {
-    color: '#FFFFFF',
-    fontWeight: '700',
+    color: "#FFFFFF",
+    fontWeight: "700",
     lineHeight: 20,
   },
   timelineDescription: {
-    color: '#A1A1AA',
+    color: "#A1A1AA",
     lineHeight: 18,
     marginTop: 4,
   },
   emptyText: {
-    color: '#A1A1AA',
+    color: "#A1A1AA",
     lineHeight: 20,
   },
 });

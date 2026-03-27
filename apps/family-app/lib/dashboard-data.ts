@@ -8,6 +8,19 @@ export type HomeSummaryActivity = {
   description: string;
 };
 
+export type HomeSnapshotStat = {
+  id: string;
+  label: string;
+  value: string;
+};
+
+export type HomeUpcomingReminder = {
+  id: string;
+  title: string;
+  detail: string;
+  description: string;
+};
+
 export type LiveElderProfile = {
   initials: string;
   name: string;
@@ -34,6 +47,75 @@ function isValidDate(value: Date) {
   return !Number.isNaN(value.getTime());
 }
 
+type ParsedReminderDate = {
+  date: Date;
+  isClockOnly: boolean;
+  parseStrategy: 'datetime' | 'time-only' | 'fallback';
+};
+
+function parseTimeParts(value: string) {
+  const match = value.trim().match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if (!match) {
+    return null;
+  }
+
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  const seconds = Number(match[3] ?? '0');
+
+  if (hours > 23 || minutes > 59 || seconds > 59) {
+    return null;
+  }
+
+  return { hours, minutes, seconds };
+}
+
+function parseReminderDate(reminder: ReminderRecord): ParsedReminderDate {
+  const parsedDateTime = new Date(reminder.endTime);
+  if (isValidDate(parsedDateTime)) {
+    return {
+      date: parsedDateTime,
+      isClockOnly: false,
+      parseStrategy: 'datetime',
+    };
+  }
+
+  const timeParts = parseTimeParts(reminder.endTime);
+  if (timeParts) {
+    const baseDate = new Date();
+    baseDate.setHours(timeParts.hours, timeParts.minutes, timeParts.seconds, 0);
+
+    return {
+      date: baseDate,
+      isClockOnly: true,
+      parseStrategy: 'time-only',
+    };
+  }
+
+  return {
+    date: new Date(),
+    isClockOnly: false,
+    parseStrategy: 'fallback',
+  };
+}
+
+function getNextReminderOccurrence(reminder: ReminderRecord) {
+  const parsed = parseReminderDate(reminder);
+  if (parsed.parseStrategy !== 'time-only') {
+    return parsed;
+  }
+
+  const nextOccurrence = new Date(parsed.date);
+  if (nextOccurrence.getTime() < Date.now()) {
+    nextOccurrence.setDate(nextOccurrence.getDate() + 1);
+  }
+
+  return {
+    ...parsed,
+    date: nextOccurrence,
+  };
+}
+
 function formatRelativeLabel(value: string) {
   const time = new Date(value).getTime();
   if (Number.isNaN(time)) {
@@ -54,6 +136,31 @@ function formatRelativeLabel(value: string) {
 
   const diffDays = Math.round(diffHours / 24);
   return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
+}
+
+function formatCalendarLabel(value: Date) {
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+  }).format(value);
+}
+
+function formatReminderDetail(value: Date) {
+  const today = new Date();
+  const tomorrow = new Date();
+  tomorrow.setDate(today.getDate() + 1);
+
+  const dateKey = formatDateKey(value);
+
+  if (dateKey === formatDateKey(today)) {
+    return `Today at ${formatTimeLabel(value)}`;
+  }
+
+  if (dateKey === formatDateKey(tomorrow)) {
+    return `Tomorrow at ${formatTimeLabel(value)}`;
+  }
+
+  return `${formatCalendarLabel(value)} at ${formatTimeLabel(value)}`;
 }
 
 function toInitials(name?: string) {
@@ -83,11 +190,30 @@ export function buildElderProfile(memoryRecord: UserMemoryRecord | null, phone: 
 export function buildCalendarActivities(reminders: ReminderRecord[]): CalendarActivity[] {
   return reminders
     .map((reminder) => {
-      const endTime = new Date(reminder.endTime);
-      const isValid = isValidDate(endTime);
+      const parsedReminder = parseReminderDate(reminder);
+      const endTime = parsedReminder.date;
+      const isValid = parsedReminder.parseStrategy !== 'fallback';
       const now = Date.now();
 
+      console.log('[buildCalendarActivities] reminder payload', {
+        _id: reminder._id,
+        createdAt: reminder.createdAt,
+        description: reminder.description,
+        endTime: reminder.endTime,
+        isClockOnly: parsedReminder.isClockOnly,
+        isValidEndTime: isValid,
+        parseStrategy: parsedReminder.parseStrategy,
+        parsedEndTime: endTime.toString(),
+        title: reminder.title,
+        updatedAt: reminder.updatedAt,
+        whyTimeUnavailable:
+          isValid
+            ? null
+            : 'The reminder endTime is neither a full datetime nor a valid HH:mm time string.',
+      });
+
       return {
+        description: reminder.description?.trim() || undefined,
         id: reminder._id,
         date: isValid ? formatDateKey(endTime) : formatDateKey(new Date()),
         detail: isValid ? formatTimeLabel(endTime) : 'Time unavailable',
@@ -99,13 +225,63 @@ export function buildCalendarActivities(reminders: ReminderRecord[]): CalendarAc
     .sort((left, right) => `${left.date} ${left.detail}`.localeCompare(`${right.date} ${right.detail}`));
 }
 
+export function buildDailySnapshot(
+  memoryRecord: UserMemoryRecord | null,
+  reminders: ReminderRecord[],
+): HomeSnapshotStat[] {
+  const todayKey = formatDateKey(new Date());
+  const remindersToday = reminders.filter((item) => {
+    const parsedReminder = parseReminderDate(item);
+    return parsedReminder.parseStrategy !== 'fallback'
+      ? formatDateKey(parsedReminder.date) === todayKey
+      : false;
+  }).length;
+
+  return [
+    {
+      id: 'today-reminders',
+      label: 'REMINDERS TODAY',
+      value: `${remindersToday}`,
+    },
+    {
+      id: 'medications',
+      label: 'MEDICATIONS',
+      value: `${memoryRecord?.medications.length ?? 0}`,
+    },
+    {
+      id: 'contacts',
+      label: 'CONTACTS',
+      value: `${memoryRecord?.contacts.length ?? 0}`,
+    },
+  ];
+}
+
+export function buildUpcomingReminder(reminders: ReminderRecord[]): HomeUpcomingReminder | null {
+  const nextReminder = [...reminders]
+    .map((item) => ({ item, parsedReminder: getNextReminderOccurrence(item) }))
+    .filter(({ parsedReminder }) => parsedReminder.parseStrategy !== 'fallback')
+    .sort((left, right) => left.parsedReminder.date.getTime() - right.parsedReminder.date.getTime())[0];
+
+  if (!nextReminder) {
+    return null;
+  }
+
+  return {
+    description: nextReminder.item.description?.trim() || 'No extra details added for this reminder.',
+    detail: formatReminderDetail(nextReminder.parsedReminder.date),
+    id: nextReminder.item._id,
+    title: nextReminder.item.title,
+  };
+}
+
 export function buildRecentActivity(reminders: ReminderRecord[]): HomeSummaryActivity[] {
   return [...reminders]
     .sort((left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime())
     .slice(0, 2)
     .map((reminder) => {
-      const endTime = new Date(reminder.endTime);
-      const fallbackDescription = isValidDate(endTime)
+      const parsedReminder = parseReminderDate(reminder);
+      const endTime = parsedReminder.date;
+      const fallbackDescription = parsedReminder.parseStrategy !== 'fallback'
         ? `Scheduled for ${new Intl.DateTimeFormat('en-US', {
             dateStyle: 'medium',
             timeStyle: 'short',

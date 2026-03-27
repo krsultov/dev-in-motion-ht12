@@ -78,16 +78,16 @@ function formatSelectedDateLabel(dateKey: string) {
 }
 
 type HomeMonthCalendarProps = {
-  activities: CalendarActivity[];
+  reminders: CalendarActivity[];
 };
 
-export function HomeMonthCalendar({ activities }: HomeMonthCalendarProps) {
+export function HomeMonthCalendar({ reminders }: HomeMonthCalendarProps) {
   const today = new Date();
   const [visibleMonth, setVisibleMonth] = useState(() => startOfMonthDate(today));
 
-  const activitiesByDate = useMemo(
+  const remindersByDate = useMemo(
     () =>
-      activities.reduce<Record<string, CalendarActivity[]>>((acc, item) => {
+      reminders.reduce<Record<string, CalendarActivity[]>>((acc, item) => {
         if (!acc[item.date]) {
           acc[item.date] = [];
         }
@@ -95,7 +95,7 @@ export function HomeMonthCalendar({ activities }: HomeMonthCalendarProps) {
         acc[item.date].push(item);
         return acc;
       }, {}),
-    [activities],
+    [reminders],
   );
 
   const monthDays = useMemo(() => {
@@ -106,7 +106,7 @@ export function HomeMonthCalendar({ activities }: HomeMonthCalendarProps) {
   }, [visibleMonth]);
 
   const defaultSelectedDate = useMemo(() => {
-    const inMonth = activities
+    const inMonth = reminders
       .filter((item) => {
         const [year, month] = item.date.split('-').map(Number);
         return year === visibleMonth.getFullYear() && month - 1 === visibleMonth.getMonth();
@@ -115,23 +115,23 @@ export function HomeMonthCalendar({ activities }: HomeMonthCalendarProps) {
       .sort()[0];
 
     return inMonth ?? null;
-  }, [activities, visibleMonth]);
+  }, [reminders, visibleMonth]);
 
   const [selectedDate, setSelectedDate] = useState<string | null>(() => {
     const todayKey = formatDateKey(today);
-    return activities.some((item) => item.date === todayKey) ? todayKey : null;
+    return reminders.some((item) => item.date === todayKey) ? todayKey : null;
   });
 
   const resolvedSelectedDate =
     selectedDate &&
-    activitiesByDate[selectedDate]?.some((item) => {
+    remindersByDate[selectedDate]?.some((item) => {
       const [year, month] = item.date.split('-').map(Number);
       return year === visibleMonth.getFullYear() && month - 1 === visibleMonth.getMonth();
     })
       ? selectedDate
       : defaultSelectedDate;
 
-  const selectedActivities = resolvedSelectedDate ? activitiesByDate[resolvedSelectedDate] ?? [] : [];
+  const selectedReminders = resolvedSelectedDate ? remindersByDate[resolvedSelectedDate] ?? [] : [];
 
   const handleChangeMonth = (offset: number) => {
     setVisibleMonth((current) => shiftMonth(current, offset));
@@ -188,14 +188,14 @@ export function HomeMonthCalendar({ activities }: HomeMonthCalendarProps) {
         <View style={styles.calendarGrid}>
           {monthDays.map((day) => {
             const dayKey = formatDateKey(day);
-            const dayActivities = activitiesByDate[dayKey] ?? [];
-            const hasActivities = dayActivities.length > 0;
+            const dayReminders = remindersByDate[dayKey] ?? [];
+            const hasReminders = dayReminders.length > 0;
             const isSelected = resolvedSelectedDate ? dayKey === resolvedSelectedDate : false;
 
             return (
               <Pressable
                 key={dayKey}
-                disabled={!hasActivities}
+                disabled={!hasReminders}
                 onPress={() => setSelectedDate(dayKey)}
                 style={[
                   styles.dayCell,
@@ -208,30 +208,35 @@ export function HomeMonthCalendar({ activities }: HomeMonthCalendarProps) {
                   style={[
                     styles.dayNumber,
                     !isSameMonthDate(day, visibleMonth) ? styles.dayNumberMuted : null,
-                    hasActivities ? styles.dayNumberActive : null,
+                    hasReminders ? styles.dayNumberActive : null,
                   ]}>
                   {day.getDate()}
                 </Text>
                 <View style={styles.dotRow}>
-                  {hasActivities ? <View style={[styles.dayDot, { backgroundColor: reminderColor }]} /> : null}
+                  {hasReminders ? <View style={[styles.dayDot, { backgroundColor: reminderColor }]} /> : null}
                 </View>
               </Pressable>
             );
           })}
         </View>
 
-        {selectedActivities.length > 0 ? (
+        {selectedReminders.length > 0 ? (
           <Surface style={styles.activityDrawer} elevation={0}>
             <Text variant="titleSmall" style={styles.activityDrawerTitle}>
               {resolvedSelectedDate ? formatSelectedDateLabel(resolvedSelectedDate) : ''}
             </Text>
-            {selectedActivities.map((item) => (
+            {selectedReminders.map((item) => (
               <View key={item.id} style={styles.activityDrawerRow}>
                 <View style={[styles.activityDrawerDot, { backgroundColor: reminderColor }]} />
                 <View style={styles.activityDrawerCopy}>
                   <Text variant="bodyMedium" style={styles.activityDrawerItemTitle}>
                     {item.title}
                   </Text>
+                  {item.description ? (
+                    <Text variant="bodySmall" style={styles.activityDrawerItemDescription}>
+                      {item.description}
+                    </Text>
+                  ) : null}
                   <Text variant="bodySmall" style={styles.activityDrawerItemDetail}>
                     {item.detail}
                     {item.isFuture ? ' | upcoming' : ''}
@@ -401,6 +406,11 @@ const styles = StyleSheet.create({
   activityDrawerItemTitle: {
     color: '#FFFFFF',
     lineHeight: 20,
+  },
+  activityDrawerItemDescription: {
+    color: '#CFCFD6',
+    lineHeight: 18,
+    marginTop: 4,
   },
   activityDrawerItemDetail: {
     color: '#8A8A96',
