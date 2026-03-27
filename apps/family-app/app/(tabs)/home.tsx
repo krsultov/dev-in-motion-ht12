@@ -8,7 +8,6 @@ import { StatusTag } from "@/components/status-tag";
 import { useAuth } from "@/context/auth-context";
 import {
   buildCalendarActivities,
-  buildDailySnapshot,
   buildElderProfile,
   buildUpcomingReminder,
 } from "@/lib/dashboard-data";
@@ -112,10 +111,6 @@ export default function HomeScreen() {
     () => buildCalendarActivities(reminders),
     [reminders],
   );
-  const dailySnapshot = useMemo(
-    () => buildDailySnapshot(memoryRecord, reminders),
-    [memoryRecord, reminders],
-  );
   const upcomingReminder = useMemo(
     () => buildUpcomingReminder(reminders),
     [reminders],
@@ -183,27 +178,6 @@ export default function HomeScreen() {
           </Card.Content>
         </Card>
       ) : null}
-
-      <View style={styles.sectionHeader}>
-        <Text variant="titleMedium" style={styles.sectionTitle}>
-          Daily snapshot
-        </Text>
-      </View>
-
-      <Card mode="outlined" style={styles.snapshotCard}>
-        <Card.Content style={styles.snapshotContent}>
-          {dailySnapshot.map((item) => (
-            <View key={item.id} style={styles.snapshotItem}>
-              <Text variant="bodySmall" style={styles.snapshotLabel}>
-                {item.label}
-              </Text>
-              <Text variant="titleMedium" style={styles.snapshotValue}>
-                {item.value}
-              </Text>
-            </View>
-          ))}
-        </Card.Content>
-      </Card>
 
       <View style={styles.sectionHeader}>
         <Text variant="titleMedium" style={styles.sectionTitle}>
@@ -341,40 +315,6 @@ const styles = StyleSheet.create({
     borderColor: "#303038",
     borderRadius: 18,
     marginBottom: 16,
-  },
-  snapshotCard: {
-    backgroundColor: "#1E1E1E",
-    borderColor: "#303038",
-    borderRadius: 18,
-    marginBottom: 18,
-  },
-  snapshotContent: {
-    flexDirection: "row",
-    gap: 12,
-    justifyContent: "space-between",
-  },
-  snapshotItem: {
-    backgroundColor: "#171717",
-    borderColor: "#2D2D2D",
-    borderRadius: 16,
-    borderWidth: 1,
-    flex: 1,
-    minHeight: 98,
-    padding: 14,
-    justifyContent: "space-between",
-  },
-  snapshotLabel: {
-    textAlign: "center",
-    color: "#8A8A96",
-    lineHeight: 16,
-    textTransform: "uppercase",
-    letterSpacing: 0.3,
-  },
-  snapshotValue: {
-    textAlign: "center",
-    color: "#FFFFFF",
-    fontWeight: "700",
-    lineHeight: 30,
   },
   timelineContent: {
     gap: 16,

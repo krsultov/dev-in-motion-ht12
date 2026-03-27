@@ -6,10 +6,8 @@ import {
   Button,
   Card,
   Chip,
-  Divider,
-  Surface,
-  Switch,
   Text,
+  Surface,
 } from "react-native-paper";
 
 import { ScreenShell } from "@/components/screen-shell";
@@ -20,11 +18,6 @@ import type { UserMemoryRecord } from "@/types/memory";
 
 const familyAccountProfile = {
   name: "Family member",
-  notificationPreferences: [
-    { id: "purchases", label: "Purchases", enabled: true },
-    { id: "wellness-alerts", label: "Wellness Alerts", enabled: true },
-    { id: "unusual-activity", label: "Unusual Activity", enabled: true },
-  ],
   permissionLevel: "Local Frontend Access",
   relationshipLabel: "Family member",
 };
@@ -36,9 +29,6 @@ export default function ProfileScreen() {
   );
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [notificationPreferences, setNotificationPreferences] = useState(
-    familyAccountProfile.notificationPreferences,
-  );
 
   useEffect(() => {
     let isMounted = true;
@@ -90,14 +80,6 @@ export default function ProfileScreen() {
     () => buildElderProfile(memoryRecord, user?.phone ?? null),
     [memoryRecord, user?.phone],
   );
-
-  const handleToggle = (id: string) => {
-    setNotificationPreferences((current) =>
-      current.map((item) =>
-        item.id === id ? { ...item, enabled: !item.enabled } : item,
-      ),
-    );
-  };
 
   const handleSignOut = () => {
     signOut();
@@ -182,27 +164,7 @@ export default function ProfileScreen() {
               style={[styles.infoChip, styles.languageChip]}
               textStyle={styles.darkChipText}
             >
-              {memoryRecord && memoryRecord.preferences.length > 0
-                ? `${memoryRecord.preferences.length} preferences`
-                : "No preferences yet"}
-            </Chip>
-            <Chip
-              compact
-              style={[styles.infoChip, styles.livingChip]}
-              textStyle={styles.lightChipText}
-            >
-              {memoryRecord && memoryRecord.medications.length > 0
-                ? `${memoryRecord.medications.length} medications`
-                : "No medications yet"}
-            </Chip>
-            <Chip
-              compact
-              style={[styles.infoChip, styles.relationshipChip]}
-              textStyle={styles.darkChipText}
-            >
-              {memoryRecord && memoryRecord.contacts.length > 0
-                ? `${memoryRecord.contacts.length} contacts`
-                : "No contacts yet"}
+              {memoryRecord ? `${memoryRecord.memories.length} memory notes` : "No memory notes yet"}
             </Chip>
           </View>
 
@@ -251,30 +213,6 @@ export default function ProfileScreen() {
               </Text>
             </View>
           </View>
-
-          <Surface style={styles.preferencesPanel} elevation={0}>
-            <Text variant="titleSmall" style={styles.preferencesTitle}>
-              Notification preferences
-            </Text>
-
-            {notificationPreferences.map((item, index) => (
-              <View key={item.id}>
-                <View style={styles.preferenceRow}>
-                  <Text variant="bodyLarge" style={styles.preferenceLabel}>
-                    {item.label}
-                  </Text>
-                  <Switch
-                    value={item.enabled}
-                    onValueChange={() => handleToggle(item.id)}
-                    color="#8B8DF1"
-                  />
-                </View>
-                {index < notificationPreferences.length - 1 ? (
-                  <Divider style={styles.preferenceDivider} />
-                ) : null}
-              </View>
-            ))}
-          </Surface>
 
           <View style={styles.footerBlock}>
             <Text variant="bodySmall" style={styles.footerLabel}>
@@ -410,12 +348,6 @@ const styles = StyleSheet.create({
   languageChip: {
     backgroundColor: "#CDCFFC",
   },
-  livingChip: {
-    backgroundColor: "#2D2D2D",
-  },
-  relationshipChip: {
-    backgroundColor: "#F9E4D4",
-  },
   subscriptionChipActive: {
     backgroundColor: "#D4F4E4",
   },
@@ -445,32 +377,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 0.2,
-  },
-  preferencesPanel: {
-    backgroundColor: "#171717",
-    borderColor: "#26262C",
-    borderRadius: 18,
-    borderWidth: 1,
-    padding: 16,
-  },
-  preferencesTitle: {
-    color: "#FFFFFF",
-    fontWeight: "700",
-    marginBottom: 10,
-  },
-  preferenceRow: {
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    minHeight: 52,
-  },
-  preferenceLabel: {
-    color: "#E4E4E7",
-    flex: 1,
-    marginRight: 16,
-  },
-  preferenceDivider: {
-    backgroundColor: "#2D2D2D",
   },
   footerBlock: {
     gap: 8,

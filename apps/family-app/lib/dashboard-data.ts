@@ -116,6 +116,20 @@ function getNextReminderOccurrence(reminder: ReminderRecord) {
   };
 }
 
+function getReminderTimelineInfo(reminder: ReminderRecord) {
+  const parsedReminder = getNextReminderOccurrence(reminder);
+  const isValid = parsedReminder.parseStrategy !== 'fallback';
+  const now = Date.now();
+  const isFuture = isValid ? parsedReminder.date.getTime() >= now : false;
+
+  return {
+    isFuture,
+    isPast: isValid ? !isFuture : false,
+    isValid,
+    parsedReminder,
+  };
+}
+
 function formatRelativeLabel(value: string) {
   const time = new Date(value).getTime();
   if (Number.isNaN(time)) {
@@ -190,34 +204,16 @@ export function buildElderProfile(memoryRecord: UserMemoryRecord | null, phone: 
 export function buildCalendarActivities(reminders: ReminderRecord[]): CalendarActivity[] {
   return reminders
     .map((reminder) => {
-      const parsedReminder = parseReminderDate(reminder);
+      const { isFuture, isPast, isValid, parsedReminder } = getReminderTimelineInfo(reminder);
       const endTime = parsedReminder.date;
-      const isValid = parsedReminder.parseStrategy !== 'fallback';
-      const now = Date.now();
-
-      console.log('[buildCalendarActivities] reminder payload', {
-        _id: reminder._id,
-        createdAt: reminder.createdAt,
-        description: reminder.description,
-        endTime: reminder.endTime,
-        isClockOnly: parsedReminder.isClockOnly,
-        isValidEndTime: isValid,
-        parseStrategy: parsedReminder.parseStrategy,
-        parsedEndTime: endTime.toString(),
-        title: reminder.title,
-        updatedAt: reminder.updatedAt,
-        whyTimeUnavailable:
-          isValid
-            ? null
-            : 'The reminder endTime is neither a full datetime nor a valid HH:mm time string.',
-      });
 
       return {
         description: reminder.description?.trim() || undefined,
         id: reminder._id,
         date: isValid ? formatDateKey(endTime) : formatDateKey(new Date()),
         detail: isValid ? formatTimeLabel(endTime) : 'Time unavailable',
-        isFuture: isValid ? endTime.getTime() > now : false,
+        isFuture,
+        isPast,
         title: reminder.title,
         type: 'booking',
       } satisfies CalendarActivity;
@@ -244,23 +240,23 @@ export function buildDailySnapshot(
       value: `${remindersToday}`,
     },
     {
-      id: 'medications',
-      label: 'MEDICATIONS',
-      value: `${memoryRecord?.medications.length ?? 0}`,
+      id: 'memory-notes',
+      label: 'MEMORY NOTES',
+      value: `${memoryRecord?.memories.length ?? 0}`,
     },
     {
-      id: 'contacts',
-      label: 'CONTACTS',
-      value: `${memoryRecord?.contacts.length ?? 0}`,
+      id: 'profile-status',
+      label: 'PROFILE',
+      value: memoryRecord ? 'Linked' : 'Pending',
     },
   ];
 }
 
 export function buildUpcomingReminder(reminders: ReminderRecord[]): HomeUpcomingReminder | null {
   const nextReminder = [...reminders]
-    .map((item) => ({ item, parsedReminder: getNextReminderOccurrence(item) }))
-    .filter(({ parsedReminder }) => parsedReminder.parseStrategy !== 'fallback')
-    .sort((left, right) => left.parsedReminder.date.getTime() - right.parsedReminder.date.getTime())[0];
+    .map((item) => ({ item, timeline: getReminderTimelineInfo(item) }))
+    .filter(({ timeline }) => timeline.isValid && timeline.isFuture)
+    .sort((left, right) => left.timeline.parsedReminder.date.getTime() - right.timeline.parsedReminder.date.getTime())[0];
 
   if (!nextReminder) {
     return null;
@@ -268,7 +264,7 @@ export function buildUpcomingReminder(reminders: ReminderRecord[]): HomeUpcoming
 
   return {
     description: nextReminder.item.description?.trim() || 'No extra details added for this reminder.',
-    detail: formatReminderDetail(nextReminder.parsedReminder.date),
+    detail: formatReminderDetail(nextReminder.timeline.parsedReminder.date),
     id: nextReminder.item._id,
     title: nextReminder.item.title,
   };

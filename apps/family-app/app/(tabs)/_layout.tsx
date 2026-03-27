@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function TabLayout() {
   return (
@@ -31,7 +31,9 @@ export default function TabLayout() {
         name="memory"
         options={{
           title: 'Memory',
-          tabBarIcon: ({ color, size }) => <Ionicons name="heart" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="brain" size={size} color={color} />
+          ),
         }}
       />
       <Tabs.Screen

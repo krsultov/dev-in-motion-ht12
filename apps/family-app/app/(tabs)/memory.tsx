@@ -1,82 +1,30 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { StyleSheet, View } from "react-native";
-import { Button, Card, Text } from "react-native-paper";
+import { useCallback, useEffect, useState } from "react";
+import { Pressable, StyleSheet, View } from "react-native";
+import { Button, Card, Modal, Portal, Text } from "react-native-paper";
+import { Ionicons } from "@expo/vector-icons";
 
-import { MemorySectionCard } from "@/components/memory-section-card";
 import { ScreenShell } from "@/components/screen-shell";
 import { useAuth } from "@/context/auth-context";
 import { getCurrentUserMemory, memoryApiBaseUrl } from "@/lib/memory-api";
 import type { UserMemoryRecord } from "@/types/memory";
 
-type MedicationTimelineItem = {
-  id: string;
-  name: string;
-  schedule: string;
-  period: "Morning" | "Midday" | "Evening" | "Anytime";
-};
+const memoryAccentPalette = ["#CDCFFC", "#D4F4E4", "#F9E4D4", "#F6E7B2"];
 
-function getMedicationPeriod(
-  schedule: string,
-): MedicationTimelineItem["period"] {
-  const normalizedSchedule = schedule.toLowerCase();
+function splitMemoryNote(note: string) {
+  const trimmed = note.trim();
+  const separatorIndex = trimmed.indexOf(":");
 
-  if (
-    normalizedSchedule.includes("morning") ||
-    normalizedSchedule.includes("breakfast") ||
-    normalizedSchedule.includes("am")
-  ) {
-    return "Morning";
+  if (separatorIndex <= 0) {
+    return {
+      label: "Memory",
+      value: trimmed,
+    };
   }
 
-  if (
-    normalizedSchedule.includes("afternoon") ||
-    normalizedSchedule.includes("midday") ||
-    normalizedSchedule.includes("lunch") ||
-    normalizedSchedule.includes("noon")
-  ) {
-    return "Midday";
-  }
-
-  if (
-    normalizedSchedule.includes("evening") ||
-    normalizedSchedule.includes("night") ||
-    normalizedSchedule.includes("bed") ||
-    normalizedSchedule.includes("pm")
-  ) {
-    return "Evening";
-  }
-
-  return "Anytime";
-}
-
-function buildMedicationTimeline(
-  memoryRecord: UserMemoryRecord | null,
-): MedicationTimelineItem[] {
-  if (!memoryRecord) {
-    return [];
-  }
-
-  const periodOrder: Record<MedicationTimelineItem["period"], number> = {
-    Morning: 0,
-    Midday: 1,
-    Evening: 2,
-    Anytime: 3,
+  return {
+    label: trimmed.slice(0, separatorIndex).trim(),
+    value: trimmed.slice(separatorIndex + 1).trim(),
   };
-
-  return [...memoryRecord.medications]
-    .map((item) => ({
-      id: item.id,
-      name: item.name,
-      period: getMedicationPeriod(item.schedule),
-      schedule: item.schedule,
-    }))
-    .sort((left, right) => {
-      const periodDifference =
-        periodOrder[left.period] - periodOrder[right.period];
-      return periodDifference !== 0
-        ? periodDifference
-        : left.name.localeCompare(right.name);
-    });
 }
 
 export default function MemoryScreen() {
@@ -86,6 +34,7 @@ export default function MemoryScreen() {
   );
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [selectedMemory, setSelectedMemory] = useState<string | null>(null);
 
   const loadMemory = useCallback(
     async (
@@ -139,15 +88,11 @@ export default function MemoryScreen() {
       request.aborted = true;
     };
   }, [loadMemory]);
-  console.log(memoryRecord);
 
   const screenTitle = memoryRecord?.name
     ? `${memoryRecord.name}'s profile`
     : "Memory profile";
-  const medicationTimeline = useMemo(
-    () => buildMedicationTimeline(memoryRecord),
-    [memoryRecord],
-  );
+  const memoryNotes = memoryRecord?.memories ?? [];
 
   return (
     <ScreenShell contentContainerStyle={styles.contentContainer}>
@@ -174,8 +119,7 @@ export default function MemoryScreen() {
               Loading memory
             </Text>
             <Text variant="bodyMedium" style={styles.feedbackBody}>
-              Fetching medications, contacts, and preferences from{" "}
-              {memoryApiBaseUrl}.
+              Fetching memory notes from {memoryApiBaseUrl}.
             </Text>
           </Card.Content>
         </Card>
@@ -217,94 +161,139 @@ export default function MemoryScreen() {
         </Card>
       ) : null}
 
-      <MemorySectionCard
-        title="Memory notes"
-        iconName="book"
-        accentColor="#8B8DF1"
-        rows={(memoryRecord?.memories ?? []).map((item, index) => ({
-          id: `${memoryRecord?._id ?? "memory"}-note-${index + 1}`,
-          label: item,
-          detail: `Memory ${index + 1}`,
-        }))}
-        emptyMessage="No memory notes stored yet."
-      />
+      <Card mode="outlined" style={styles.notesCard}>
+        <Card.Content style={styles.notesContent}>
+          <View style={styles.notesHeader}>
+            <View style={styles.notesHeaderCopy}>
+              <Text variant="titleMedium" style={styles.notesTitle}>
+                Memory notes
+              </Text>
+              <Text variant="bodyMedium" style={styles.notesSubtitle}>
+                Saved details the assistant can use to stay personal and helpful.
+              </Text>
+            </View>
+            <View style={styles.notesBadge}>
+              <Ionicons name="albums-outline" size={16} color="#23244D" />
+              <Text variant="bodySmall" style={styles.notesBadgeText}>
+                {memoryNotes.length} notes
+              </Text>
+            </View>
+          </View>
 
-      <MemorySectionCard
-        title="Medications"
-        iconName="medical"
-        accentColor="#534AB7"
-        rows={(memoryRecord?.medications ?? []).map((item) => ({
-          id: item.id,
-          label: item.name,
-          detail: item.schedule,
-          iconColor: item.id.endsWith("1") ? "#D4F4E4" : "#CDCFFC",
-        }))}
-        emptyMessage="No medications stored yet."
-      />
-
-      <Card mode="outlined" style={styles.feedbackCard}>
-        <Card.Content style={styles.timelineContent}>
-          <Text variant="titleMedium" style={styles.feedbackTitle}>
-            Medication routine
-          </Text>
-          <Text variant="bodyMedium" style={styles.feedbackBody}>
-            A timeline grouped from the medication schedule text already stored
-            in memory.
-          </Text>
-
-          {medicationTimeline.length > 0 ? (
-            medicationTimeline.map((item, index) => (
-              <View key={item.id} style={styles.timelineRow}>
-                <View style={styles.timelineRail}>
-                  <View style={styles.timelineDot} />
-                  {index < medicationTimeline.length - 1 ? (
-                    <View style={styles.timelineLine} />
-                  ) : null}
-                </View>
-                <View style={styles.timelineItemCard}>
-                  <Text variant="bodySmall" style={styles.timelineLabel}>
-                    {item.period}
+          {memoryNotes.length > 0 ? (
+            <>
+              <View style={styles.summaryRow}>
+                <View style={styles.summaryCard}>
+                  <Text variant="bodySmall" style={styles.summaryLabel}>
+                    Total
                   </Text>
-                  <Text variant="titleSmall" style={styles.timelineTitle}>
-                    {item.name}
-                  </Text>
-                  <Text variant="bodySmall" style={styles.timelineMeta}>
-                    {item.schedule}
+                  <Text variant="headlineSmall" style={styles.summaryValue}>
+                    {memoryNotes.length}
                   </Text>
                 </View>
+                <Pressable
+                  onPress={() => setSelectedMemory(memoryNotes[0] ?? null)}
+                  style={({ pressed }) => [
+                    styles.summaryCard,
+                    styles.summaryCardInteractive,
+                    pressed ? styles.summaryCardPressed : null,
+                  ]}
+                >
+                  <Text variant="bodySmall" style={styles.summaryLabel}>
+                    Latest
+                  </Text>
+                  <Text
+                    variant="bodyMedium"
+                    style={styles.summaryText}
+                    numberOfLines={2}
+                  >
+                    {memoryNotes[0]}
+                  </Text>
+                  <Text variant="bodySmall" style={styles.summaryHint}>
+                    Tap to read full note
+                  </Text>
+                </Pressable>
               </View>
-            ))
+
+              <View style={styles.noteList}>
+                {memoryNotes.map((item, index) => {
+                  const note = splitMemoryNote(item);
+                  const accentColor =
+                    memoryAccentPalette[index % memoryAccentPalette.length];
+
+                  return (
+                    <View
+                      key={`${memoryRecord?._id ?? "memory"}-note-${index + 1}`}
+                      style={styles.noteCard}
+                    >
+                      <View style={styles.noteCardTop}>
+                        <View
+                          style={[
+                            styles.noteAccent,
+                            { backgroundColor: accentColor },
+                          ]}
+                        />
+                        <Text variant="bodySmall" style={styles.noteIndex}>
+                          Note {index + 1}
+                        </Text>
+                      </View>
+                      <Text variant="bodySmall" style={styles.noteLabel}>
+                        {note.label}
+                      </Text>
+                      <Text variant="bodyLarge" style={styles.noteValue}>
+                        {note.value}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+            </>
           ) : (
-            <Text variant="bodyMedium" style={styles.feedbackBody}>
-              No medication routine has been stored yet.
-            </Text>
+            <View style={styles.emptyState}>
+              <View style={styles.emptyStateIcon}>
+                <Ionicons name="albums-outline" size={22} color="#4D4FA0" />
+              </View>
+              <Text variant="titleMedium" style={styles.feedbackTitle}>
+                No memory notes stored yet
+              </Text>
+              <Text variant="bodyMedium" style={styles.feedbackBody}>
+                Saved notes will show up here once the assistant learns something meaningful.
+              </Text>
+            </View>
           )}
         </Card.Content>
       </Card>
 
-      <MemorySectionCard
-        title="Important contacts"
-        iconName="call"
-        accentColor="#1D9E75"
-        rows={(memoryRecord?.contacts ?? []).map((item) => ({
-          id: item.id,
-          label: item.name,
-          detail: `${item.role} | ${item.phone}`,
-        }))}
-        emptyMessage="No important contacts stored yet."
-      />
+      <Portal>
+        <Modal
+          visible={selectedMemory !== null}
+          onDismiss={() => setSelectedMemory(null)}
+          contentContainerStyle={styles.memoryModal}
+        >
+          <View style={styles.memoryModalHeader}>
+            <View style={styles.memoryModalTitleRow}>
+              <View style={styles.memoryModalIcon}>
+                <Ionicons name="book-outline" size={20} color="#23244D" />
+              </View>
+              <View style={styles.memoryModalCopy}>
+                <Text variant="titleMedium" style={styles.memoryModalTitle}>
+                  Latest memory
+                </Text>
+                <Text variant="bodySmall" style={styles.memoryModalSubtitle}>
+                  Full note
+                </Text>
+              </View>
+            </View>
+            <Button compact mode="text" textColor="#8B8DF1" onPress={() => setSelectedMemory(null)}>
+              Close
+            </Button>
+          </View>
 
-      <MemorySectionCard
-        title="Preferences"
-        iconName="heart"
-        accentColor="#D29B2F"
-        rows={(memoryRecord?.preferences ?? []).map((item) => ({
-          id: item.id,
-          label: item.label,
-          detail: item.value,
-        }))}
-        emptyMessage="No preferences stored yet."
-      />
+          <Text variant="bodyLarge" style={styles.memoryModalBody}>
+            {selectedMemory ?? ""}
+          </Text>
+        </Modal>
+      </Portal>
     </ScreenShell>
   );
 }
@@ -345,9 +334,6 @@ const styles = StyleSheet.create({
   feedbackContent: {
     gap: 14,
   },
-  timelineContent: {
-    gap: 14,
-  },
   feedbackText: {
     gap: 6,
   },
@@ -359,48 +345,183 @@ const styles = StyleSheet.create({
     color: "#A1A1AA",
     lineHeight: 20,
   },
-  timelineRow: {
+  notesCard: {
+    backgroundColor: "#1E1E1E",
+    borderColor: "#303038",
+    borderRadius: 22,
+    marginBottom: 18,
+  },
+  notesContent: {
+    gap: 18,
+  },
+  notesHeader: {
+    alignItems: "flex-start",
+    flexDirection: "row",
+    gap: 12,
+    justifyContent: "space-between",
+  },
+  notesHeaderCopy: {
+    flex: 1,
+    gap: 6,
+  },
+  notesTitle: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
+  notesSubtitle: {
+    color: "#A1A1AA",
+    lineHeight: 20,
+    maxWidth: 260,
+  },
+  notesBadge: {
+    alignItems: "center",
+    alignSelf: "flex-start",
+    backgroundColor: "#CDCFFC",
+    borderRadius: 999,
+    flexDirection: "row",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  notesBadgeText: {
+    color: "#23244D",
+    fontWeight: "700",
+  },
+  summaryRow: {
     flexDirection: "row",
     gap: 12,
   },
-  timelineRail: {
-    alignItems: "center",
-    width: 14,
-  },
-  timelineDot: {
-    backgroundColor: "#8B8DF1",
-    borderRadius: 99,
-    height: 10,
-    marginTop: 4,
-    width: 10,
-  },
-  timelineLine: {
-    backgroundColor: "#2D2D2D",
-    flex: 1,
-    marginVertical: 4,
-    width: 1,
-  },
-  timelineItemCard: {
+  summaryCard: {
     backgroundColor: "#171717",
     borderColor: "#2D2D2D",
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 1,
     flex: 1,
-    gap: 4,
-    padding: 14,
+    gap: 8,
+    minHeight: 96,
+    padding: 16,
   },
-  timelineLabel: {
-    color: "#D4F4E4",
+  summaryCardInteractive: {
+    justifyContent: "space-between",
+  },
+  summaryCardPressed: {
+    opacity: 0.88,
+  },
+  summaryLabel: {
+    color: "#8A8A96",
     fontWeight: "700",
     letterSpacing: 0.2,
     textTransform: "uppercase",
   },
-  timelineTitle: {
+  summaryValue: {
     color: "#FFFFFF",
     fontWeight: "700",
   },
-  timelineMeta: {
+  summaryText: {
+    color: "#E4E4E7",
+    lineHeight: 20,
+  },
+  summaryHint: {
+    color: "#8B8DF1",
+    fontWeight: "600",
+    marginTop: 4,
+  },
+  noteList: {
+    gap: 12,
+  },
+  noteCard: {
+    backgroundColor: "#171717",
+    borderColor: "#2D2D2D",
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: 10,
+    padding: 16,
+  },
+  noteCardTop: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  noteAccent: {
+    borderRadius: 999,
+    height: 12,
+    width: 44,
+  },
+  noteIndex: {
+    color: "#8A8A96",
+    fontWeight: "700",
+  },
+  noteLabel: {
     color: "#A1A1AA",
-    lineHeight: 18,
+    fontWeight: "700",
+    letterSpacing: 0.2,
+    textTransform: "uppercase",
+  },
+  noteValue: {
+    color: "#FFFFFF",
+    fontWeight: "600",
+    lineHeight: 22,
+  },
+  emptyState: {
+    alignItems: "center",
+    backgroundColor: "#171717",
+    borderColor: "#2D2D2D",
+    borderRadius: 20,
+    borderWidth: 1,
+    gap: 8,
+    padding: 24,
+  },
+  emptyStateIcon: {
+    alignItems: "center",
+    backgroundColor: "#23244D",
+    borderRadius: 999,
+    height: 46,
+    justifyContent: "center",
+    marginBottom: 4,
+    width: 46,
+  },
+  memoryModal: {
+    backgroundColor: "#1E1E1E",
+    borderColor: "#303038",
+    borderRadius: 24,
+    borderWidth: 1,
+    gap: 18,
+    margin: 20,
+    padding: 20,
+  },
+  memoryModalHeader: {
+    alignItems: "flex-start",
+    flexDirection: "row",
+    gap: 12,
+    justifyContent: "space-between",
+  },
+  memoryModalTitleRow: {
+    alignItems: "center",
+    flex: 1,
+    flexDirection: "row",
+    gap: 12,
+  },
+  memoryModalIcon: {
+    alignItems: "center",
+    backgroundColor: "#CDCFFC",
+    borderRadius: 14,
+    height: 40,
+    justifyContent: "center",
+    width: 40,
+  },
+  memoryModalCopy: {
+    flex: 1,
+  },
+  memoryModalTitle: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
+  memoryModalSubtitle: {
+    color: "#8A8A96",
+    marginTop: 2,
+  },
+  memoryModalBody: {
+    color: "#E4E4E7",
+    lineHeight: 24,
   },
 });
