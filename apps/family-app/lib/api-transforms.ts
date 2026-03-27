@@ -19,6 +19,10 @@ function asOptionalString(value: unknown) {
   return typeof value === 'string' && value.trim().length > 0 ? value : undefined;
 }
 
+function asOptionalBoolean(value: unknown) {
+  return typeof value === 'boolean' ? value : undefined;
+}
+
 function makeFallbackId(prefix: string, index: number, ...parts: Array<string | undefined>) {
   const normalizedParts = parts
     .filter((part): part is string => typeof part === 'string' && part.trim().length > 0)
@@ -144,6 +148,7 @@ export function normalizeUserMemoryRecord(value: unknown): UserMemoryRecord | nu
     password: asOptionalString(record.password),
     phone: asOptionalString(record.phone),
     preferences: normalizePreferences(record.preferences),
+    subscription: asOptionalBoolean(record.subscription) ?? asOptionalBoolean(record.subsription),
     updatedAt: asString(record.updatedAt),
   };
 }

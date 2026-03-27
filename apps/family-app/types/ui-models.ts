@@ -25,6 +25,7 @@ export type CalendarActivity = {
   date: string;
   title: string;
   detail: string;
+  description?: string;
   type: CalendarActivityType;
   isFuture?: boolean;
 };

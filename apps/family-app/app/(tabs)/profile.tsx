@@ -1,28 +1,39 @@
-import { useEffect, useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
-import { router } from 'expo-router';
-import { Avatar, Button, Card, Chip, Divider, Surface, Switch, Text } from 'react-native-paper';
+import { useEffect, useMemo, useState } from "react";
+import { StyleSheet, View } from "react-native";
+import { router } from "expo-router";
+import {
+  Avatar,
+  Button,
+  Card,
+  Chip,
+  Divider,
+  Surface,
+  Switch,
+  Text,
+} from "react-native-paper";
 
-import { ScreenShell } from '@/components/screen-shell';
-import { useAuth } from '@/context/auth-context';
-import { buildElderProfile } from '@/lib/dashboard-data';
-import { getCurrentUserMemory } from '@/lib/memory-api';
-import type { UserMemoryRecord } from '@/types/memory';
+import { ScreenShell } from "@/components/screen-shell";
+import { useAuth } from "@/context/auth-context";
+import { buildElderProfile } from "@/lib/dashboard-data";
+import { getCurrentUserMemory } from "@/lib/memory-api";
+import type { UserMemoryRecord } from "@/types/memory";
 
 const familyAccountProfile = {
-  name: 'Family member',
+  name: "Family member",
   notificationPreferences: [
-    { id: 'purchases', label: 'Purchases', enabled: true },
-    { id: 'wellness-alerts', label: 'Wellness Alerts', enabled: true },
-    { id: 'unusual-activity', label: 'Unusual Activity', enabled: true },
+    { id: "purchases", label: "Purchases", enabled: true },
+    { id: "wellness-alerts", label: "Wellness Alerts", enabled: true },
+    { id: "unusual-activity", label: "Unusual Activity", enabled: true },
   ],
-  permissionLevel: 'Local Frontend Access',
-  relationshipLabel: 'Family member',
+  permissionLevel: "Local Frontend Access",
+  relationshipLabel: "Family member",
 };
 
 export default function ProfileScreen() {
   const { signOut, user } = useAuth();
-  const [memoryRecord, setMemoryRecord] = useState<UserMemoryRecord | null>(null);
+  const [memoryRecord, setMemoryRecord] = useState<UserMemoryRecord | null>(
+    null,
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [notificationPreferences, setNotificationPreferences] = useState(
@@ -35,7 +46,9 @@ export default function ProfileScreen() {
     const loadMemory = async () => {
       if (!user?.phone) {
         setMemoryRecord(null);
-        setErrorMessage('Sign in with a phone number to load the live profile.');
+        setErrorMessage(
+          "Sign in with a phone number to load the live profile.",
+        );
         setIsLoading(false);
         return;
       }
@@ -56,7 +69,7 @@ export default function ProfileScreen() {
           setErrorMessage(
             error instanceof Error
               ? error.message
-              : 'Unable to load the live profile right now.',
+              : "Unable to load the live profile right now.",
           );
         }
       } finally {
@@ -88,7 +101,7 @@ export default function ProfileScreen() {
 
   const handleSignOut = () => {
     signOut();
-    router.replace('/auth');
+    router.replace("/auth");
   };
 
   return (
@@ -123,12 +136,6 @@ export default function ProfileScreen() {
             </View>
           </View>
 
-          <Text variant="bodyMedium" style={styles.bio}>
-            This section is now driven by the live user memory record. Extra
-            profile fields like age, city, and bio do not exist in the backend
-            yet.
-          </Text>
-
           {isLoading ? (
             <Surface style={styles.statePanel} elevation={0}>
               <Text variant="bodyMedium" style={styles.stateText}>
@@ -154,6 +161,22 @@ export default function ProfileScreen() {
           ) : null}
 
           <View style={styles.chipRow}>
+            <Chip
+              compact
+              style={[
+                styles.infoChip,
+                memoryRecord?.subscription
+                  ? styles.subscriptionChipActive
+                  : styles.subscriptionChipInactive,
+              ]}
+              textStyle={
+                memoryRecord?.subscription
+                  ? styles.subscriptionChipActiveText
+                  : styles.subscriptionChipInactiveText
+              }
+            >
+              {memoryRecord?.subscription ? "Subscribed" : "Not subscribed"}
+            </Chip>
             <Chip
               compact
               style={[styles.infoChip, styles.languageChip]}
@@ -393,6 +416,12 @@ const styles = StyleSheet.create({
   relationshipChip: {
     backgroundColor: "#F9E4D4",
   },
+  subscriptionChipActive: {
+    backgroundColor: "#D4F4E4",
+  },
+  subscriptionChipInactive: {
+    backgroundColor: "#2D2D2D",
+  },
   darkChipText: {
     color: "#23244D",
     fontSize: 11,
@@ -400,6 +429,18 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   lightChipText: {
+    color: "#F4F4F5",
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.2,
+  },
+  subscriptionChipActiveText: {
+    color: "#173D2C",
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.2,
+  },
+  subscriptionChipInactiveText: {
     color: "#F4F4F5",
     fontSize: 11,
     fontWeight: "700",

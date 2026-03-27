@@ -22,6 +22,7 @@ export type UserMemoryRecord = {
   phone?: string;
   password?: string;
   name?: string;
+  subscription?: boolean;
   memories: string[];
   contacts: MemoryContact[];
   preferences: MemoryPreference[];
@@ -38,6 +39,7 @@ export type CreateUserMemoryPayload = {
   phone: string;
   password?: string;
   name?: string;
+  subscription?: boolean;
   memories?: string[];
   contacts?: MemoryContact[];
   preferences?: MemoryPreference[];
