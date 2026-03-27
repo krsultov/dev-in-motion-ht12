@@ -267,7 +267,9 @@ app.post("/incoming-call", async (c) => {
   const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Connect>
-    <Stream url="wss://${host}/media-stream?from=${encodeURIComponent(String(from))}"/>
+    <Stream url="wss://${host}/media-stream">
+      <Parameter name="callerPhone" value="${String(from)}"/>
+    </Stream>
   </Connect>
 </Response>`;
   return c.text(twiml, 200, { "Content-Type": "text/xml" });
@@ -277,8 +279,7 @@ app.post("/incoming-call", async (c) => {
 app.get(
   "/media-stream",
   upgradeWebSocket((c) => {
-    const callerPhone = c.req.query("from") ?? "unknown";
-    console.log(`WebSocket upgrade for caller: ${callerPhone}`);
+    let callerPhone = "unknown";
 
     let openaiWs: WebSocket | null = null;
     let streamSid: string | null = null;
@@ -455,7 +456,8 @@ app.get(
         switch (msg.event) {
           case "start":
             streamSid = msg.start.streamSid;
-            console.log(`Stream started: ${streamSid}`);
+            callerPhone = msg.start.customParameters?.callerPhone ?? "unknown";
+            console.log(`Stream started: ${streamSid}, caller: ${callerPhone}`);
             break;
 
           case "media":
