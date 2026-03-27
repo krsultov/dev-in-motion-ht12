@@ -3,14 +3,10 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Card, IconButton, Surface, Text } from 'react-native-paper';
 
-import type { CalendarActivity, CalendarActivityType } from '@/types/ui-models';
+import type { CalendarActivity } from '@/types/ui-models';
 
 const weekdayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-const activityTypeColors: Record<CalendarActivityType, string> = {
-  assistant: '#8B8DF1',
-  booking: '#7ED8A6',
-  trip: '#F3B267',
-};
+const reminderColor = '#8B8DF1';
 
 function formatDateKey(value: Date) {
   const year = value.getFullYear();
@@ -147,10 +143,10 @@ export function HomeMonthCalendar({ activities }: HomeMonthCalendarProps) {
         <View style={styles.calendarHeader}>
           <View style={styles.calendarHeading}>
             <Text variant="titleMedium" style={styles.calendarTitle}>
-              Activity calendar
+              Reminders calendar
             </Text>
             <Text variant="bodySmall" style={styles.calendarSubtitle}>
-              Browse past and upcoming plans, then tap a marked day for details.
+              Browse reminder dates, then tap a marked day for reminder details.
             </Text>
           </View>
           <View style={styles.monthSwitcher}>
@@ -174,28 +170,16 @@ export function HomeMonthCalendar({ activities }: HomeMonthCalendarProps) {
 
         <View style={styles.legendRow}>
           <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: activityTypeColors.assistant }]} />
+            <View style={[styles.legendDot, { backgroundColor: reminderColor }]} />
             <Text variant="bodySmall" style={styles.legendText}>
-              AI talks
-            </Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: activityTypeColors.booking }]} />
-            <Text variant="bodySmall" style={styles.legendText}>
-              Bookings
-            </Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: activityTypeColors.trip }]} />
-            <Text variant="bodySmall" style={styles.legendText}>
-              Trips
+              Reminders
             </Text>
           </View>
         </View>
 
         <View style={styles.weekdayRow}>
-          {weekdayLabels.map((label) => (
-            <Text key={label} variant="bodySmall" style={styles.weekdayLabel}>
+          {weekdayLabels.map((label, index) => (
+            <Text key={`${label}-${index}`} variant="bodySmall" style={styles.weekdayLabel}>
               {label}
             </Text>
           ))}
@@ -206,7 +190,6 @@ export function HomeMonthCalendar({ activities }: HomeMonthCalendarProps) {
             const dayKey = formatDateKey(day);
             const dayActivities = activitiesByDate[dayKey] ?? [];
             const hasActivities = dayActivities.length > 0;
-            const uniqueTypes = Array.from(new Set(dayActivities.map((item) => item.type)));
             const isSelected = resolvedSelectedDate ? dayKey === resolvedSelectedDate : false;
 
             return (
@@ -230,12 +213,7 @@ export function HomeMonthCalendar({ activities }: HomeMonthCalendarProps) {
                   {day.getDate()}
                 </Text>
                 <View style={styles.dotRow}>
-                  {uniqueTypes.map((type) => (
-                    <View
-                      key={type}
-                      style={[styles.dayDot, { backgroundColor: activityTypeColors[type] }]}
-                    />
-                  ))}
+                  {hasActivities ? <View style={[styles.dayDot, { backgroundColor: reminderColor }]} /> : null}
                 </View>
               </Pressable>
             );
@@ -249,9 +227,7 @@ export function HomeMonthCalendar({ activities }: HomeMonthCalendarProps) {
             </Text>
             {selectedActivities.map((item) => (
               <View key={item.id} style={styles.activityDrawerRow}>
-                <View
-                  style={[styles.activityDrawerDot, { backgroundColor: activityTypeColors[item.type] }]}
-                />
+                <View style={[styles.activityDrawerDot, { backgroundColor: reminderColor }]} />
                 <View style={styles.activityDrawerCopy}>
                   <Text variant="bodyMedium" style={styles.activityDrawerItemTitle}>
                     {item.title}
@@ -267,10 +243,10 @@ export function HomeMonthCalendar({ activities }: HomeMonthCalendarProps) {
         ) : (
           <Surface style={styles.emptyState} elevation={0}>
             <Text variant="bodyMedium" style={styles.emptyStateTitle}>
-              No marked days this month yet
+              No reminders this month yet
             </Text>
             <Text variant="bodySmall" style={styles.emptyStateText}>
-              Try another month to see older activity or upcoming scheduled plans.
+              Try another month to see older or upcoming reminders.
             </Text>
           </Surface>
         )}
