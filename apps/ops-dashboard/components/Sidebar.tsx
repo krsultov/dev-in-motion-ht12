@@ -2,12 +2,12 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Users, Brain, Bell } from 'lucide-react'
+import { Users, BarChart2, Calculator } from 'lucide-react'
 
 const navItems = [
   { icon: Users, label: 'Users', href: '/users' },
-  { icon: Brain, label: 'Memories', href: '/memory' },
-  { icon: Bell, label: 'Reminders', href: '/reminders' },
+  { icon: BarChart2, label: 'Analytics', href: '/analytics' },
+  { icon: Calculator, label: 'Calculator', href: '/calculator' },
 ]
 
 export function Sidebar() {
@@ -27,20 +27,26 @@ export function Sidebar() {
 
       <nav className="flex-1 px-3 py-4">
         <ul className="space-y-0.5">
-          {navItems.map((item) => {
+          {navItems.map((item, i) => {
             const isActive = pathname === item.href
             return (
-              <li key={item.label}>
+              <li key={item.label} className="animate-slide-left" style={{ animationDelay: `${i * 60}ms` }}>
                 <Link
                   href={item.href}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                     isActive
-                      ? 'bg-[#2e2b5c] text-white'
-                      : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+                      ? 'bg-[#2e2b5c] text-white shadow-[inset_0_0_0_1px_rgba(124,115,230,0.3)]'
+                      : 'text-zinc-400 hover:text-white hover:bg-zinc-800/70 hover:translate-x-0.5'
                   }`}
                 >
-                  <item.icon size={16} className={isActive ? 'text-[#7c73e6]' : 'text-zinc-500'} />
+                  <item.icon
+                    size={16}
+                    className={`transition-colors duration-200 ${isActive ? 'text-[#7c73e6]' : 'text-zinc-500 group-hover:text-zinc-300'}`}
+                  />
                   {item.label}
+                  {isActive && (
+                    <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#7c73e6]" />
+                  )}
                 </Link>
               </li>
             )
