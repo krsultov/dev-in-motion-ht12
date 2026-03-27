@@ -41,6 +41,7 @@ export type UserMemory = {
   phone: string;
   password: string;
   name?: string;
+  plan?: 'subscription' | 'per-minute';
   subscription?: boolean;
   memories?: string[];
   contacts?: Contact[];
@@ -48,6 +49,26 @@ export type UserMemory = {
   medications?: Medication[];
   createdAt: string;
   updatedAt: string;
+};
+
+export type CallEvent = {
+  userId: string;
+  type: 'inbound' | 'outbound';
+  startedAt: string;
+  endedAt?: string;
+  durationSec?: number;
+  reminderId?: string;
+};
+
+export type CallEventDoc = CallEvent & { _id: import("mongodb").ObjectId };
+
+export type StatsOverview = {
+  totalUsers: number;
+  usersByMonth: Array<{ month: string; count: number }>;
+  totalCalls: number;
+  callsByMonth: Array<{ month: string; count: number }>;
+  avgCallDurationSec: number;
+  planDistribution: { subscription: number; perMinute: number };
 };
 
 export type Reminder = {
@@ -68,6 +89,7 @@ export type UserDataResponse = {
     phone?: string;
     password?: string;
     name?: string;
+    plan?: 'subscription' | 'per-minute';
     subscription?: boolean;
     memories: unknown[];
     contacts: unknown[];

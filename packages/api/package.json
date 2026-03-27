@@ -13,12 +13,14 @@
     "@agendajs/mongo-backend": "^4.0.0",
     "@nelson/shared-types": "file:../shared-types",
     "agenda": "^6.2.3",
+    "cors": "^2.8.6",
     "cron-parser": "^5.5.0",
     "express": "^5.2.1",
     "mongodb": "^7.1.1",
     "twilio": "^5.13.1"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "tsx": "^4.21.0"
   }

@@ -1,7 +1,8 @@
 import express from "express";
+import cors from "cors";
 import { ObjectId } from "mongodb";
 import { getDb } from "../db/src/index";
-import type { MemoryDoc, MemoryEntry } from "@nelson/shared-types";
+import type { MemoryDoc, MemoryEntry, CallEvent, CallEventDoc, StatsOverview } from "@nelson/shared-types";
 
 
 declare const process: {
@@ -40,7 +41,27 @@ async function getMemoryCollection() {
   return collectionPromise!;
 }
 
+const CALL_EVENTS_COLLECTION = process.env.CALL_EVENTS_COLLECTION ?? "CallEvents";
+const USER_MEMORY_COLLECTION = process.env.USER_MEMORY_COLLECTION ?? "UserMemory";
+
+let callEventsCollectionPromise:
+  | Promise<ReturnType<ReturnType<Awaited<ReturnType<typeof getDb>>["collection"]>>>
+  | undefined;
+
+async function getCallEventsCollection() {
+  if (!callEventsCollectionPromise) {
+    callEventsCollectionPromise = (async () => {
+      const db = await getDb();
+      const collection = db.collection<CallEventDoc>(CALL_EVENTS_COLLECTION);
+      await collection.createIndex({ startedAt: -1 });
+      return collection;
+    })() as any;
+  }
+  return callEventsCollectionPromise!;
+}
+
 const app = express();
+app.use(cors());
 app.use(express.json());
 
 app.post("/memories", async (req: any, res: any) => {
@@ -189,6 +210,114 @@ app.delete("/memories/:key", async (req: any, res: any) => {
     const collection = await getMemoryCollection();
     const result = await (collection as any).deleteOne(filter);
     res.status(200).json({ deletedCount: result.deletedCount ?? 0 });
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// ── Call Events ──────────────────────────────────────────────────────────────
+
+app.post("/call-events", async (req: any, res: any) => {
+  try {
+    const userId = typeof req.body?.userId === "string" ? req.body.userId.trim() : "";
+    const type = req.body?.type === "outbound" ? "outbound" : "inbound";
+    const startedAt = typeof req.body?.startedAt === "string" ? req.body.startedAt : nowIso();
+    const reminderId = typeof req.body?.reminderId === "string" ? req.body.reminderId : undefined;
+
+    if (!userId) {
+      res.status(400).json({ error: "userId is required" });
+      return;
+    }
+
+    const doc: CallEvent = { userId, type, startedAt };
+    if (reminderId) doc.reminderId = reminderId;
+
+    const collection = await getCallEventsCollection();
+    const result = await (collection as any).insertOne(doc);
+    res.status(201).json({ _id: result.insertedId.toHexString() });
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+app.put("/call-events/:id", async (req: any, res: any) => {
+  try {
+    const id = typeof req.params?.id === "string" ? req.params.id.trim() : "";
+    if (!id) {
+      res.status(400).json({ error: "id is required" });
+      return;
+    }
+
+    const $set: Record<string, unknown> = {};
+    if (typeof req.body?.endedAt === "string") $set.endedAt = req.body.endedAt;
+    if (typeof req.body?.durationSec === "number") $set.durationSec = req.body.durationSec;
+
+    const collection = await getCallEventsCollection();
+    await (collection as any).updateOne({ _id: new ObjectId(id) }, { $set });
+    res.status(200).json({ ok: true });
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+app.get("/stats/overview", async (_req: any, res: any) => {
+  try {
+    const db = await getDb();
+    const userMemoryCol = db.collection(USER_MEMORY_COLLECTION);
+    const callEventsCol = await getCallEventsCollection();
+
+    const [totalUsers, usersByMonthAgg, totalCalls, callsByMonthAgg, avgDurationAgg, planAgg] =
+      await Promise.all([
+        userMemoryCol.countDocuments(),
+        userMemoryCol
+          .aggregate([
+            { $addFields: { parsedDate: { $dateFromString: { dateString: "$createdAt", onError: null } } } },
+            { $match: { parsedDate: { $ne: null } } },
+            { $group: { _id: { $dateToString: { format: "%Y-%m", date: "$parsedDate" } }, count: { $sum: 1 } } },
+            { $sort: { _id: 1 } },
+          ])
+          .toArray(),
+        (callEventsCol as any).countDocuments(),
+        (callEventsCol as any)
+          .aggregate([
+            { $addFields: { parsedDate: { $dateFromString: { dateString: "$startedAt", onError: null } } } },
+            { $match: { parsedDate: { $ne: null } } },
+            { $group: { _id: { $dateToString: { format: "%Y-%m", date: "$parsedDate" } }, count: { $sum: 1 } } },
+            { $sort: { _id: 1 } },
+          ])
+          .toArray(),
+        (callEventsCol as any)
+          .aggregate([
+            { $match: { durationSec: { $exists: true, $gt: 0 } } },
+            { $group: { _id: null, avg: { $avg: "$durationSec" } } },
+          ])
+          .toArray(),
+        userMemoryCol
+          .aggregate([
+            {
+              $group: {
+                _id: null,
+                subscription: { $sum: { $cond: [{ $eq: ["$plan", "subscription"] }, 1, 0] } },
+                perMinute: { $sum: { $cond: [{ $or: [{ $eq: ["$plan", "per-minute"] }, { $not: ["$plan"] }] }, 1, 0] } },
+              },
+            },
+          ])
+          .toArray(),
+      ]);
+
+    const stats: StatsOverview = {
+      totalUsers,
+      usersByMonth: usersByMonthAgg.map((r: any) => ({ month: r._id, count: r.count })),
+      totalCalls,
+      callsByMonth: callsByMonthAgg.map((r: any) => ({ month: r._id, count: r.count })),
+      avgCallDurationSec: avgDurationAgg[0]?.avg ?? 0,
+      planDistribution: {
+        subscription: planAgg[0]?.subscription ?? 0,
+        perMinute: planAgg[0]?.perMinute ?? 0,
+      },
+    };
+
+    res.status(200).json(stats);
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
   }

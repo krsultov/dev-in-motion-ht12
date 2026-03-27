@@ -6,8 +6,11 @@ const REMINDERS_API_PORT = 3004;
 
 export const remindersApiBaseUrl = getServiceBaseUrl(REMINDERS_API_PORT);
 
-export async function listReminders() {
-  const response = await requestJson<unknown>(remindersApiBaseUrl, '/reminders');
+export async function listReminders(userId?: string) {
+  const path = userId
+    ? `/reminders?userId=${encodeURIComponent(userId)}`
+    : '/reminders';
+  const response = await requestJson<unknown>(remindersApiBaseUrl, path);
   return normalizeReminderRecords(response);
 }
 

@@ -1,5 +1,7 @@
 import express from "express";
+import cors from "cors";
 import { ObjectId } from "mongodb";
+import Twilio from "twilio";
 import { CallUserMemory, type UserMemory } from "../db/src/index";
 
 declare const process: {
@@ -15,6 +17,7 @@ function normalize(doc: UserMemoryDoc) {
     phone: doc.phone,
     password: doc.password,
     name: doc.name,
+    plan: doc.plan,
     subscription: doc.subscription,
     memories: doc.memories ?? [],
     contacts: doc.contacts ?? [],
@@ -26,6 +29,7 @@ function normalize(doc: UserMemoryDoc) {
 }
 
 const app = express();
+app.use(cors());
 app.use(express.json());
 
 app.post("/userData", async (req: any, res: any) => {
@@ -43,6 +47,7 @@ app.post("/userData", async (req: any, res: any) => {
     if (typeof req.body?.phone === "string") toInsert.phone = req.body.phone;
     if (typeof req.body?.password === "string") toInsert.password = req.body.password;
     if (typeof req.body?.name === "string") toInsert.name = req.body.name;
+    if (typeof req.body?.plan === "string" && (req.body.plan === "subscription" || req.body.plan === "per-minute")) toInsert.plan = req.body.plan;
     if (typeof req.body?.subscription === "boolean") toInsert.subscription = req.body.subscription;
     if (Array.isArray(req.body?.memories)) toInsert.memories = req.body.memories;
     if (Array.isArray(req.body?.contacts)) toInsert.contacts = req.body.contacts;
@@ -124,6 +129,7 @@ app.put("/userData/:_id", async (req: any, res: any) => {
     if (typeof req.body?.phone === "string") $set.phone = req.body.phone;
     if (typeof req.body?.password === "string") $set.password = req.body.password;
     if (typeof req.body?.name === "string") $set.name = req.body.name;
+    if (typeof req.body?.plan === "string" && (req.body.plan === "subscription" || req.body.plan === "per-minute")) $set.plan = req.body.plan;
     if (typeof req.body?.subscription === "boolean") $set.subscription = req.body.subscription;
     if (Array.isArray(req.body?.memories)) $set.memories = req.body.memories;
     if (Array.isArray(req.body?.contacts)) $set.contacts = req.body.contacts;
@@ -139,6 +145,77 @@ app.put("/userData/:_id", async (req: any, res: any) => {
 
     res.status(200).json(normalize(doc));
   } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// ── OTP via Twilio Verify ────────────────────────────────────────────────────
+
+const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID ?? "";
+const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN ?? "";
+const TWILIO_VERIFY_SERVICE_SID = process.env.TWILIO_VERIFY_SERVICE_SID ?? "";
+
+function getTwilioClient() {
+  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_VERIFY_SERVICE_SID) {
+    throw new Error("Twilio Verify is not configured — set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_VERIFY_SERVICE_SID");
+  }
+  return Twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+}
+
+app.post("/otp/send", async (req: any, res: any) => {
+  try {
+    const phone = typeof req.body?.phone === "string" ? req.body.phone.trim() : "";
+    if (!phone) {
+      res.status(400).json({ error: "phone is required" });
+      return;
+    }
+
+    const client = getTwilioClient();
+    await client.verify.v2
+      .services(TWILIO_VERIFY_SERVICE_SID)
+      .verifications.create({ to: phone, channel: "sms" });
+
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.error("OTP send error:", error);
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+app.post("/otp/verify", async (req: any, res: any) => {
+  try {
+    const phone = typeof req.body?.phone === "string" ? req.body.phone.trim() : "";
+    const code = typeof req.body?.code === "string" ? req.body.code.trim() : "";
+
+    if (!phone || !code) {
+      res.status(400).json({ error: "phone and code are required" });
+      return;
+    }
+
+    const client = getTwilioClient();
+    const check = await client.verify.v2
+      .services(TWILIO_VERIFY_SERVICE_SID)
+      .verificationChecks.create({ to: phone, code });
+
+    if (check.status !== "approved") {
+      res.status(200).json({ verified: false });
+      return;
+    }
+
+    // Look up existing user by phone
+    const collection = await CallUserMemory();
+    const doc = await collection.findOne({ phone } as any);
+
+    if (doc) {
+      res.status(200).json({
+        verified: true,
+        user: { name: doc.name ?? "Family member", phone: doc.phone },
+      });
+    } else {
+      res.status(200).json({ verified: true, isNewUser: true, user: { name: "Family member", phone } });
+    }
+  } catch (error) {
+    console.error("OTP verify error:", error);
     res.status(500).json({ error: (error as Error).message });
   }
 });

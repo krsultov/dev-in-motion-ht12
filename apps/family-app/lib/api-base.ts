@@ -138,7 +138,18 @@ function resolveHost() {
   };
 }
 
+const SERVICE_ENV_VARS: Record<number, string> = {
+  3001: process.env.EXPO_PUBLIC_MEMORY_API_URL ?? '',
+  3002: process.env.EXPO_PUBLIC_USERDATA_API_URL ?? '',
+  3004: process.env.EXPO_PUBLIC_REMINDERS_API_URL ?? '',
+};
+
 export function getServiceBaseUrl(port: number) {
+  const envOverride = SERVICE_ENV_VARS[port];
+  if (envOverride) {
+    return envOverride.replace(/\/+$/, '');
+  }
+
   const { host } = resolveHost();
   return `http://${host}:${port}`;
 }

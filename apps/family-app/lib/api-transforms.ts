@@ -193,9 +193,11 @@ export function normalizeReminderRecord(value: unknown): ReminderRecord | null {
 
   return {
     _id: reminderId,
+    userId: asString(record.userId),
     createdAt: asString(record.createdAt),
     cron: asOptionalString(record.cron),
     description: asOptionalString(record.description),
+    startTime: asString(record.startTime),
     endTime: asString(record.endTime),
     title,
     updatedAt: asString(record.updatedAt),

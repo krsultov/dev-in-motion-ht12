@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { SUBSCRIPTION_PRICE, PER_MINUTE_RATE } from '@/lib/pricing'
 import {
   AreaChart,
   Area,
@@ -17,24 +16,6 @@ import {
   Legend,
 } from 'recharts'
 
-const MONTHS = ['October', 'November', 'December', 'January', 'February', 'March']
-const GROWTH = [0.35, 0.50, 0.63, 0.75, 0.88, 1.0]
-
-function buildUserGrowth(total: number) {
-  return MONTHS.map((month, i) => ({
-    month,
-    users: Math.max(1, Math.round(total * GROWTH[i])),
-  }))
-}
-
-function buildRevenue(subUsers: number, pmUsers: number) {
-  return MONTHS.map((month, i) => ({
-    month,
-    subscription: Math.round(subUsers * SUBSCRIPTION_PRICE * GROWTH[i]),
-    perMinute: Math.round(pmUsers * 45 * PER_MINUTE_RATE * GROWTH[i]),
-  }))
-}
-
 const tooltipStyle = {
   backgroundColor: '#27272a',
   border: '1px solid #3f3f46',
@@ -47,14 +28,19 @@ const tooltipLabelStyle = { color: '#fff', fontWeight: 600, marginBottom: 4 }
 
 const CHART_TITLES = ['User growth', 'Monthly revenue (€)', 'Plan split']
 
+type UserGrowthEntry = { month: string; users: number }
+type RevenueEntry = { month: string; subscription: number; perMinute: number }
+
 export function AnalyticsCharts({
-  totalUsers,
   subscriptionUsers,
   perMinuteUsers,
+  userGrowth,
+  revenueData,
 }: {
-  totalUsers: number
   subscriptionUsers: number
   perMinuteUsers: number
+  userGrowth: UserGrowthEntry[]
+  revenueData: RevenueEntry[]
 }) {
   const [current, setCurrent] = useState(0)
 
@@ -62,12 +48,13 @@ export function AnalyticsCharts({
     setCurrent((c) => dir === 'next' ? (c + 1) % 3 : (c - 1 + 3) % 3)
   }
 
-  const userGrowth = buildUserGrowth(totalUsers)
-  const revenueData = buildRevenue(subscriptionUsers, perMinuteUsers)
   const planSplit = [
     { name: 'Subscriptions', value: subscriptionUsers, color: '#7c73e6' },
     { name: 'Per-minute', value: perMinuteUsers, color: '#4ade80' },
   ]
+
+  const hasGrowthData = userGrowth.length > 0
+  const hasRevenueData = revenueData.length > 0
 
   return (
     <div className="bg-[#27272a] rounded-2xl border border-zinc-800 p-5">
@@ -93,41 +80,53 @@ export function AnalyticsCharts({
       </div>
 
       <div key={current}>
-        <ResponsiveContainer width="100%" height={300}>
-          {current === 0 ? (
-            <AreaChart data={userGrowth}>
-              <defs>
-                <linearGradient id="userGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#7c73e6" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#7c73e6" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" />
-              <XAxis dataKey="month" tickFormatter={(v) => v.slice(0, 3)} tick={{ fill: '#71717a', fontSize: 12 }} axisLine={false} tickLine={false} />
-              <YAxis width={30} tickFormatter={(v) => v === 0 || !Number.isInteger(v) ? '' : v} tick={{ fill: '#71717a', fontSize: 12 }} axisLine={false} tickLine={false} allowDecimals={false} />
-              <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} labelStyle={tooltipLabelStyle} separator=": " />
-              <Area type="monotone" dataKey="users" name="Users" stroke="#7c73e6" strokeWidth={2} fill="url(#userGradient)" animationDuration={1000} />
-            </AreaChart>
-          ) : current === 1 ? (
-            <AreaChart data={revenueData}>
-              <defs>
-                <linearGradient id="subGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#7c73e6" stopOpacity={0.4} />
-                  <stop offset="95%" stopColor="#7c73e6" stopOpacity={0.05} />
-                </linearGradient>
-                <linearGradient id="pmGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#4ade80" stopOpacity={0.4} />
-                  <stop offset="95%" stopColor="#4ade80" stopOpacity={0.05} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" />
-              <XAxis dataKey="month" tickFormatter={(v) => v.slice(0, 3)} tick={{ fill: '#71717a', fontSize: 12 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: '#71717a', fontSize: 12 }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} labelStyle={tooltipLabelStyle} separator=": " />
-              <Area type="monotone" dataKey="subscription" stackId="a" stroke="#7c73e6" strokeWidth={2} fill="url(#subGradient)" name="Subscriptions" animationDuration={1000} />
-              <Area type="monotone" dataKey="perMinute" stackId="a" stroke="#4ade80" strokeWidth={2} fill="url(#pmGradient)" name="Per-minute" animationDuration={1000} />
-            </AreaChart>
+        {current === 0 ? (
+          hasGrowthData ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={userGrowth}>
+                <defs>
+                  <linearGradient id="userGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#7c73e6" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#7c73e6" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" />
+                <XAxis dataKey="month" tick={{ fill: '#71717a', fontSize: 12 }} axisLine={false} tickLine={false} />
+                <YAxis width={30} tickFormatter={(v) => v === 0 || !Number.isInteger(v) ? '' : v} tick={{ fill: '#71717a', fontSize: 12 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} labelStyle={tooltipLabelStyle} separator=": " />
+                <Area type="monotone" dataKey="users" name="Users" stroke="#7c73e6" strokeWidth={2} fill="url(#userGradient)" animationDuration={1000} />
+              </AreaChart>
+            </ResponsiveContainer>
           ) : (
+            <div className="h-[300px] flex items-center justify-center text-zinc-500 text-sm">No growth data yet</div>
+          )
+        ) : current === 1 ? (
+          hasRevenueData ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={revenueData}>
+                <defs>
+                  <linearGradient id="subGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#7c73e6" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="#7c73e6" stopOpacity={0.05} />
+                  </linearGradient>
+                  <linearGradient id="pmGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#4ade80" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="#4ade80" stopOpacity={0.05} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" />
+                <XAxis dataKey="month" tick={{ fill: '#71717a', fontSize: 12 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: '#71717a', fontSize: 12 }} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} labelStyle={tooltipLabelStyle} separator=": " />
+                <Area type="monotone" dataKey="subscription" stackId="a" stroke="#7c73e6" strokeWidth={2} fill="url(#subGradient)" name="Subscriptions" animationDuration={1000} />
+                <Area type="monotone" dataKey="perMinute" stackId="a" stroke="#4ade80" strokeWidth={2} fill="url(#pmGradient)" name="Per-minute" animationDuration={1000} />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[300px] flex items-center justify-center text-zinc-500 text-sm">No revenue data yet</div>
+          )
+        ) : (
+          <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie data={planSplit} cx="50%" cy="45%" outerRadius={80} dataKey="value" stroke="none" animationBegin={0} animationDuration={600}>
                 {planSplit.map((entry) => (
@@ -137,8 +136,8 @@ export function AnalyticsCharts({
               <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} labelStyle={{ display: 'none' }} separator=": " />
               <Legend wrapperStyle={{ paddingTop: 12 }} formatter={(value) => <span style={{ color: '#a1a1aa', fontSize: 12 }}>{value}</span>} />
             </PieChart>
-          )}
-        </ResponsiveContainer>
+          </ResponsiveContainer>
+        )}
       </div>
     </div>
   )

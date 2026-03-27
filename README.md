@@ -4,15 +4,12 @@
 
 ### *The internet finally speaks to everyone — even if all you have is a landline. You call. Nelson handles the rest.*
 
-**callnelson.net**
-
 </div>
 
 ---
 
 > **One phone call. Your entire life, handled.**  
-> Nelson is an AI agent you dial from any phone — Nokia, landline, payphone, or smartphone — that knows who you are, speaks Bulgarian, remembers everything you tell it, and actually does things: books transport, sets reminders, relays messages, and calls for help when you need it.  
->
+> Nelson is an AI agent you dial from any phone — Nokia, landline, payphone, or smartphone — that knows who you are, speaks Bulgarian, remembers everything you tell it, and actually does things: sets reminders, call for help or build an entire memory about you.
 > No app. No smartphone. No internet. Just dial.
 
 ---
@@ -34,8 +31,8 @@ Nelson is a **voice-first AI agent platform** with three layers:
 | Layer | What it is |
 |---|---|
 | 📞 **Voice Agent** | An AI you call from any phone. It speaks Bulgarian, knows you by your phone number, and has persistent memory across every conversation. |
-| 👨‍👩‍👧 **Family App** | A mobile + web app for family members to set up their relative's profile, see activity, leave messages, and approve sensitive actions. |
-| 🖥️ **Operator Dashboard** | A web dashboard to monitor calls, track API costs, manage users, and ensure the network is healthy. |
+| 👨‍👩‍👧 **Family App** | A mobile + web app for family members to set up their relative's profile and see activity. |
+| 🖥️ **Operator Dashboard** | A web dashboard to track API costs and statistics about the users and manage them. |
 
 ---
 
@@ -51,58 +48,26 @@ Nelson is a **voice-first AI agent platform** with three layers:
 - **SOS escalation** — say *"I need help"* → 112 called + all family contacts alerted simultaneously
 
 ### What the agent can do on a call
-- 🔍 **Research** — weather, bus times, pharmacy hours, news, government procedures, anything
-- ⏰ **Reminders** — *"Remind me to take my pills every day at 8am"* → Nelson calls you
-- 📞 **Relay** — *"Tell Ivan I'm okay"* → SMS sent; *"Call Maria"* → call bridged
-- 📬 **Messages** — reads messages left by family from the app
-- 💸 **Payments** — pay utility bills, send money to contacts via linked bank account
-- 🧠 **Memory** — builds a living profile from every conversation
-- 🆘 **Emergency** — instant escalation with parallel notification to all trusted contacts
+- **Research** — weather, bus times, pharmacy hours, news, government procedures, anything
+- **Reminders** — *"Remind me to take my pills every day at 8am"* → Nelson calls you
+- **Memory** — builds a living profile from every conversation
+- **Emergency** — instant escalation with parallel notification to all trusted contacts
 
 ### 👨‍👩‍👧 Family App
-- **Pulse** — a daily green/yellow/red presence signal. No transcripts, just *"she's okay"*
 - **LifeCard** — set up your relative's profile: health, meds, contacts, preferences
-- **Activity Feed** — what was asked, what the agent did — signals only, privacy preserved
-- **Leave a Message** — type or record a voice message → Nelson delivers it on the next call
 - **Memory Garden** — see and edit everything Nelson knows about your relative
-- **Purchase Approval** — agent pauses on payments, pushes to family, waits for approve/deny
-- **Calm Alerts** — family configures urgency per event type: silent / badge / push
+- **Calendar for reminders** — see all your reminders, past or future
 
 ### 🖥️ Operator Dashboard
-- Live call monitor — active calls, tool calls in progress, response latency
-- Cost tracker — Whisper + GPT-4o + ElevenLabs per call and per user
-- User map — registered callers by village and region
-- Open SOS log — emergency events with timestamps and outcomes
-- Memory audit — most common topics, memory size per user
-- Agent health — failed calls, low-confidence turns, timeout alerts
+- **Cost tracker** — GPT Realtime costs per call and per user
+- **Open SOS log** — emergency events with timestamps and outcomes
+- **Agent health** — failed calls, low-confidence turns, timeout alerts
 
 ---
 
 ## 🏗️ Architecture
 
-```
-Phone Call (any device)
-    │
-    ▼
-apps/voice-gateway          ← receives call via Voice provider
-    │
-    ▼
-packages/agent-core         ← orchestration loop, prompt, tool router
-    │
-    ├──▶ MCP Memory Server  ← read profile, search memories, write new facts
-    ├──▶ MCP Reminder Server← create/cancel/snooze reminders, schedule callbacks
-    ├──▶ Search Tool        ← web search, local cache
-    └──▶ Comms Tool         ← SMS relay, call bridge, SOS dispatch
-    │
-    ▼
-TTS (ElevenLabs BG)         ← response spoken back to caller
-    │
-    ▼
-Event stored in DB
-    │
-    ├──▶ Family App (realtime)
-    └──▶ Ops Dashboard (realtime)
-```
+<img width="1536" height="1024" alt="image" src="https://github.com/user-attachments/assets/86c4b470-c86e-4cf8-9e08-e769fa5e6243" />
 
 ---
 
@@ -114,26 +79,16 @@ nelson/
 │  ├─ family-app/           # Expo (iOS + Android + Web) — family portal
 │  ├─ ops-dashboard/        # operator monitoring dashboard
 │  ├─ voice-gateway/        # Hono.js - call entrypoint, STT/TTS pipeline
-│  └─ api/                  # Hono.js - business logic, auth, jobs, REST
 │
 ├─ packages/
 │  ├─ agent-core/           # LLM orchestration, prompt, tool calling
-│  ├─ mcp-memory-server/    # MCP server: user profile + memory CRUD
-│  ├─ mcp-reminders-server/ # MCP server: reminder scheduling + callbacks
-│  ├─ memory-domain/        # User profile, retrieval, privacy rules
+│  ├─ mcp/    # MCP servers
 │  ├─ reminders-domain/     # Scheduler, outbound call jobs
-│  ├─ shared-types/         # Zod schemas: UserProfile, CallSession, MemoryItem, Reminder
-│  ├─ shared-ui/            # Reusable React/Expo UI components
-│  ├─ db/                   # Prisma schema + migrations
-│  ├─ clients/              # OpenAI, ElevenLabs, Whisper, Voice SDK wrappers
-│  └─ config/               # tsconfig, eslint, env helpers
+│  ├─ api/     # APIs for MCP servers in ExpressJS
+│  ├─ shared-types/         # Zod schemas
+│  ├─ db/                   # MongoDB pool
 │
-├─ infra/
-│  ├─ docker/
-│  ├─ scripts/
-│  └─ deployment/
-│
-├─ package.json
+├─ Dockerfile
 └─ README.md                ← you are here
 ```
 
@@ -148,11 +103,8 @@ nelson/
 | Mobile + Web App | Expo (React Native) |
 | Operator Dashboard | Next.js |
 | API | Hono.js |
-| Database | PostgreSQL + pgvector or Mongo/RAG stuff |
-| Speech to Text | OpenAI Whisper large-v3 (Bulgarian) |
-| Text to Speech | ElevenLabs (Bulgarian voice) |
-| Telephony | ? |
-| Bulgarian number | ? |
+| Database | MongoDB / custom RAG implementation |
+| Telephony | Twilio |
 | Agent tool protocol | Model Context Protocol (MCP) |
 | Realtime | WebSockets |
 

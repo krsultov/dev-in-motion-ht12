@@ -11,8 +11,7 @@ import { router } from "expo-router";
 import { Button, Surface, Text, TextInput } from "react-native-paper";
 
 import { useAuth } from "@/context/auth-context";
-
-const DEMO_OTP = "123456";
+import { sendOtp, verifyOtp } from "@/lib/otp-api";
 
 export default function AuthScreen() {
   const [phone, setPhone] = useState<string>("");
@@ -31,9 +30,14 @@ export default function AuthScreen() {
 
     setIsLoading(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 700));
+      await sendOtp(trimmedPhone);
       setIsOtpSent(true);
-      Alert.alert("Code sent", `Use ${DEMO_OTP} to continue in this demo.`);
+      Alert.alert("Code sent", "A verification code has been sent to your phone.");
+    } catch (error) {
+      Alert.alert(
+        "Could not send code",
+        error instanceof Error ? error.message : "Please try again.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -50,15 +54,20 @@ export default function AuthScreen() {
 
     setIsLoading(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      const result = await verifyOtp(trimmedPhone, normalizedOtp);
 
-      if (normalizedOtp !== DEMO_OTP) {
-        Alert.alert("Incorrect code", "Use the demo code shown after sending.");
+      if (!result.verified) {
+        Alert.alert("Incorrect code", "The code you entered is incorrect. Please try again.");
         return;
       }
 
-      signIn({ name: "Family member", phone: trimmedPhone });
+      signIn(result.user ?? { name: "Family member", phone: trimmedPhone });
       router.replace("/(tabs)/home");
+    } catch (error) {
+      Alert.alert(
+        "Verification failed",
+        error instanceof Error ? error.message : "Please try again.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -154,9 +163,7 @@ export default function AuthScreen() {
                 onChangeText={handleOtpChange}
               />
               <View style={styles.otpMetaRow}>
-                <Text variant="bodySmall" style={styles.helperText}>
-                  Demo code: {DEMO_OTP}
-                </Text>
+                <View />
                 <Pressable onPress={handleChangePhone}>
                   <Text variant="bodySmall" style={styles.changePhoneText}>
                     Change phone
