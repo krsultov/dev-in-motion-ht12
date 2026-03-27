@@ -11,16 +11,130 @@ import {
   normalizeUserMemoryRecords,
 } from '@/lib/api-transforms';
 
-const MEMORY_DATA_API_PORT = 3002;
-const memoryApiBaseUrl = getServiceBaseUrl(MEMORY_DATA_API_PORT);
+const MEMORY_API_PORT = 3001;
+const USERDATA_API_PORT = 3002;
+
+const memoryApiBaseUrl = getServiceBaseUrl(MEMORY_API_PORT);
+const userdataApiBaseUrl = getServiceBaseUrl(USERDATA_API_PORT);
+
+type MemoryEntry = {
+  id: string;
+  userId: string;
+  key: string;
+  value: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : null;
+}
+
+function asString(value: unknown) {
+  return typeof value === 'string' ? value : '';
+}
+
+function toTitleCase(input: string) {
+  return input
+    .split(' ')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function formatMemoryEntry(entry: MemoryEntry) {
+  const normalizedValue = entry.value.trim();
+  if (!normalizedValue) {
+    return '';
+  }
+
+  const normalizedKey = entry.key.trim().replace(/[_-]+/g, ' ');
+  if (!normalizedKey) {
+    return normalizedValue;
+  }
+
+  return `${toTitleCase(normalizedKey)}: ${normalizedValue}`;
+}
+
+function normalizeMemoryEntries(value: unknown): MemoryEntry[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.reduce<MemoryEntry[]>((items, entry) => {
+    const record = asRecord(entry);
+    if (!record) {
+      return items;
+    }
+
+    const id = asString(record.id).trim();
+    const userId = asString(record.userId).trim();
+    const key = asString(record.key).trim();
+    const formattedValue = asString(record.value);
+
+    if (!id || !userId || !key || !formattedValue.trim()) {
+      return items;
+    }
+
+    items.push({
+      id,
+      userId,
+      key,
+      value: formattedValue,
+      createdAt: asString(record.createdAt),
+      updatedAt: asString(record.updatedAt),
+    });
+
+    return items;
+  }, []);
+}
+
+function mergeMemoryNotes(record: UserMemoryRecord | null, memoryEntries: MemoryEntry[], phone: string) {
+  const persistedMemories = record?.memories ?? [];
+  const liveMemories = memoryEntries.map(formatMemoryEntry).filter(Boolean);
+  const mergedMemories = [...persistedMemories, ...liveMemories].filter(Boolean);
+  const dedupedMemories = [...new Set(mergedMemories)];
+
+  if (!record) {
+    if (dedupedMemories.length === 0) {
+      return null;
+    }
+
+    const latestUpdatedAt = [...memoryEntries]
+      .map((entry) => entry.updatedAt)
+      .filter((value) => value.trim().length > 0)
+      .sort((left, right) => new Date(right).getTime() - new Date(left).getTime())[0] ?? '';
+
+    return {
+      _id: `memory-only:${phone}`,
+      contacts: [],
+      createdAt: latestUpdatedAt,
+      medications: [],
+      memories: dedupedMemories,
+      phone,
+      preferences: [],
+      updatedAt: latestUpdatedAt,
+    } satisfies UserMemoryRecord;
+  }
+
+  return {
+    ...record,
+    memories: dedupedMemories,
+  };
+}
+
+async function listMemoryEntries(phone: string) {
+  const response = await requestJson<unknown>(memoryApiBaseUrl, `/memories?userId=${encodeURIComponent(phone)}`);
+  return normalizeMemoryEntries(response);
+}
 
 export async function listUserMemoryRecordIds(phone: string) {
-  const response = await requestJson<unknown>(memoryApiBaseUrl, `/userMemory/${encodeURIComponent(phone)}`);
+  const response = await requestJson<unknown>(userdataApiBaseUrl, `/userMemory/${encodeURIComponent(phone)}`);
   return normalizeUserMemoryRecordIds(response);
 }
 
 export async function getUserMemoryRecord(recordId: string) {
-  const response = await requestJson<unknown>(memoryApiBaseUrl, `/userData/${encodeURIComponent(recordId)}`);
+  const response = await requestJson<unknown>(userdataApiBaseUrl, `/userData/${encodeURIComponent(recordId)}`);
   const record = normalizeUserMemoryRecord(response);
 
   if (!record) {
@@ -31,7 +145,7 @@ export async function getUserMemoryRecord(recordId: string) {
 }
 
 export async function listUserMemoryRecords() {
-  const response = await requestJson<unknown>(memoryApiBaseUrl, '/userData');
+  const response = await requestJson<unknown>(userdataApiBaseUrl, '/userData');
   return normalizeUserMemoryRecords(response);
 }
 
@@ -41,12 +155,27 @@ export async function getCurrentUserMemory(phone: string) {
     return null;
   }
 
-  const records = await listUserMemoryRecords();
-  const latestRecord = records
-    .filter((record) => record.phone?.trim() === normalizedPhone)
-    .sort((left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime())[0];
+  const [recordIds, memoryEntries] = await Promise.all([
+    listUserMemoryRecordIds(normalizedPhone),
+    listMemoryEntries(normalizedPhone).catch(() => []),
+  ]);
 
-  return latestRecord ?? null;
+  const records = await Promise.all(
+    recordIds.map(async ({ _id }) => {
+      try {
+        return await getUserMemoryRecord(_id);
+      } catch {
+        return null;
+      }
+    }),
+  );
+
+  const latestRecord =
+    records
+      .filter((record): record is UserMemoryRecord => record !== null)
+      .sort((left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime())[0] ?? null;
+
+  return mergeMemoryNotes(latestRecord, memoryEntries, normalizedPhone);
 }
 
 export async function getLatestUserMemoryRecord() {
@@ -57,7 +186,7 @@ export async function getLatestUserMemoryRecord() {
 }
 
 export async function createUserMemory(payload: CreateUserMemoryPayload) {
-  const response = await requestJson<unknown>(memoryApiBaseUrl, '/userData', {
+  const response = await requestJson<unknown>(userdataApiBaseUrl, '/userData', {
     body: JSON.stringify(payload),
     method: 'POST',
   });
@@ -71,7 +200,7 @@ export async function createUserMemory(payload: CreateUserMemoryPayload) {
 }
 
 export async function updateUserMemory(recordId: string, payload: UpdateUserMemoryPayload) {
-  const response = await requestJson<unknown>(memoryApiBaseUrl, `/userData/${encodeURIComponent(recordId)}`, {
+  const response = await requestJson<unknown>(userdataApiBaseUrl, `/userData/${encodeURIComponent(recordId)}`, {
     body: JSON.stringify(payload),
     method: 'PUT',
   });

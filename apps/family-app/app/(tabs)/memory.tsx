@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { Button, Card, Text } from "react-native-paper";
 
@@ -7,77 +7,6 @@ import { ScreenShell } from "@/components/screen-shell";
 import { useAuth } from "@/context/auth-context";
 import { getCurrentUserMemory, memoryApiBaseUrl } from "@/lib/memory-api";
 import type { UserMemoryRecord } from "@/types/memory";
-
-type MedicationTimelineItem = {
-  id: string;
-  name: string;
-  schedule: string;
-  period: "Morning" | "Midday" | "Evening" | "Anytime";
-};
-
-function getMedicationPeriod(
-  schedule: string,
-): MedicationTimelineItem["period"] {
-  const normalizedSchedule = schedule.toLowerCase();
-
-  if (
-    normalizedSchedule.includes("morning") ||
-    normalizedSchedule.includes("breakfast") ||
-    normalizedSchedule.includes("am")
-  ) {
-    return "Morning";
-  }
-
-  if (
-    normalizedSchedule.includes("afternoon") ||
-    normalizedSchedule.includes("midday") ||
-    normalizedSchedule.includes("lunch") ||
-    normalizedSchedule.includes("noon")
-  ) {
-    return "Midday";
-  }
-
-  if (
-    normalizedSchedule.includes("evening") ||
-    normalizedSchedule.includes("night") ||
-    normalizedSchedule.includes("bed") ||
-    normalizedSchedule.includes("pm")
-  ) {
-    return "Evening";
-  }
-
-  return "Anytime";
-}
-
-function buildMedicationTimeline(
-  memoryRecord: UserMemoryRecord | null,
-): MedicationTimelineItem[] {
-  if (!memoryRecord) {
-    return [];
-  }
-
-  const periodOrder: Record<MedicationTimelineItem["period"], number> = {
-    Morning: 0,
-    Midday: 1,
-    Evening: 2,
-    Anytime: 3,
-  };
-
-  return [...memoryRecord.medications]
-    .map((item) => ({
-      id: item.id,
-      name: item.name,
-      period: getMedicationPeriod(item.schedule),
-      schedule: item.schedule,
-    }))
-    .sort((left, right) => {
-      const periodDifference =
-        periodOrder[left.period] - periodOrder[right.period];
-      return periodDifference !== 0
-        ? periodDifference
-        : left.name.localeCompare(right.name);
-    });
-}
 
 export default function MemoryScreen() {
   const { user } = useAuth();
@@ -139,15 +68,10 @@ export default function MemoryScreen() {
       request.aborted = true;
     };
   }, [loadMemory]);
-  console.log(memoryRecord);
 
   const screenTitle = memoryRecord?.name
     ? `${memoryRecord.name}'s profile`
     : "Memory profile";
-  const medicationTimeline = useMemo(
-    () => buildMedicationTimeline(memoryRecord),
-    [memoryRecord],
-  );
 
   return (
     <ScreenShell contentContainerStyle={styles.contentContainer}>
@@ -174,8 +98,7 @@ export default function MemoryScreen() {
               Loading memory
             </Text>
             <Text variant="bodyMedium" style={styles.feedbackBody}>
-              Fetching medications, contacts, and preferences from{" "}
-              {memoryApiBaseUrl}.
+              Fetching memory notes from {memoryApiBaseUrl}.
             </Text>
           </Card.Content>
         </Card>
@@ -228,83 +151,6 @@ export default function MemoryScreen() {
         }))}
         emptyMessage="No memory notes stored yet."
       />
-
-      <MemorySectionCard
-        title="Medications"
-        iconName="medical"
-        accentColor="#534AB7"
-        rows={(memoryRecord?.medications ?? []).map((item) => ({
-          id: item.id,
-          label: item.name,
-          detail: item.schedule,
-          iconColor: item.id.endsWith("1") ? "#D4F4E4" : "#CDCFFC",
-        }))}
-        emptyMessage="No medications stored yet."
-      />
-
-      <Card mode="outlined" style={styles.feedbackCard}>
-        <Card.Content style={styles.timelineContent}>
-          <Text variant="titleMedium" style={styles.feedbackTitle}>
-            Medication routine
-          </Text>
-          <Text variant="bodyMedium" style={styles.feedbackBody}>
-            A timeline grouped from the medication schedule text already stored
-            in memory.
-          </Text>
-
-          {medicationTimeline.length > 0 ? (
-            medicationTimeline.map((item, index) => (
-              <View key={item.id} style={styles.timelineRow}>
-                <View style={styles.timelineRail}>
-                  <View style={styles.timelineDot} />
-                  {index < medicationTimeline.length - 1 ? (
-                    <View style={styles.timelineLine} />
-                  ) : null}
-                </View>
-                <View style={styles.timelineItemCard}>
-                  <Text variant="bodySmall" style={styles.timelineLabel}>
-                    {item.period}
-                  </Text>
-                  <Text variant="titleSmall" style={styles.timelineTitle}>
-                    {item.name}
-                  </Text>
-                  <Text variant="bodySmall" style={styles.timelineMeta}>
-                    {item.schedule}
-                  </Text>
-                </View>
-              </View>
-            ))
-          ) : (
-            <Text variant="bodyMedium" style={styles.feedbackBody}>
-              No medication routine has been stored yet.
-            </Text>
-          )}
-        </Card.Content>
-      </Card>
-
-      <MemorySectionCard
-        title="Important contacts"
-        iconName="call"
-        accentColor="#1D9E75"
-        rows={(memoryRecord?.contacts ?? []).map((item) => ({
-          id: item.id,
-          label: item.name,
-          detail: `${item.role} | ${item.phone}`,
-        }))}
-        emptyMessage="No important contacts stored yet."
-      />
-
-      <MemorySectionCard
-        title="Preferences"
-        iconName="heart"
-        accentColor="#D29B2F"
-        rows={(memoryRecord?.preferences ?? []).map((item) => ({
-          id: item.id,
-          label: item.label,
-          detail: item.value,
-        }))}
-        emptyMessage="No preferences stored yet."
-      />
     </ScreenShell>
   );
 }
@@ -345,9 +191,6 @@ const styles = StyleSheet.create({
   feedbackContent: {
     gap: 14,
   },
-  timelineContent: {
-    gap: 14,
-  },
   feedbackText: {
     gap: 6,
   },
@@ -358,49 +201,5 @@ const styles = StyleSheet.create({
   feedbackBody: {
     color: "#A1A1AA",
     lineHeight: 20,
-  },
-  timelineRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  timelineRail: {
-    alignItems: "center",
-    width: 14,
-  },
-  timelineDot: {
-    backgroundColor: "#8B8DF1",
-    borderRadius: 99,
-    height: 10,
-    marginTop: 4,
-    width: 10,
-  },
-  timelineLine: {
-    backgroundColor: "#2D2D2D",
-    flex: 1,
-    marginVertical: 4,
-    width: 1,
-  },
-  timelineItemCard: {
-    backgroundColor: "#171717",
-    borderColor: "#2D2D2D",
-    borderRadius: 16,
-    borderWidth: 1,
-    flex: 1,
-    gap: 4,
-    padding: 14,
-  },
-  timelineLabel: {
-    color: "#D4F4E4",
-    fontWeight: "700",
-    letterSpacing: 0.2,
-    textTransform: "uppercase",
-  },
-  timelineTitle: {
-    color: "#FFFFFF",
-    fontWeight: "700",
-  },
-  timelineMeta: {
-    color: "#A1A1AA",
-    lineHeight: 18,
   },
 });

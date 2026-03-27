@@ -244,14 +244,14 @@ export function buildDailySnapshot(
       value: `${remindersToday}`,
     },
     {
-      id: 'medications',
-      label: 'MEDICATIONS',
-      value: `${memoryRecord?.medications.length ?? 0}`,
+      id: 'memory-notes',
+      label: 'MEMORY NOTES',
+      value: `${memoryRecord?.memories.length ?? 0}`,
     },
     {
-      id: 'contacts',
-      label: 'CONTACTS',
-      value: `${memoryRecord?.contacts.length ?? 0}`,
+      id: 'profile-status',
+      label: 'PROFILE',
+      value: memoryRecord ? 'Linked' : 'Pending',
     },
   ];
 }
