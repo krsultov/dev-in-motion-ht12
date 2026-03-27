@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import { createNodeWebSocket } from "@hono/node-ws";
 import { serve } from "@hono/node-server";
 import WebSocket from "ws";
+import { applyGainToUlaw } from "./ulaw";
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 if (!OPENAI_API_KEY) {
@@ -41,6 +42,13 @@ NEW CALLERS:
 - When "get_user_profile" returns "isNewUser": true, this is someone calling for the first time.
 - Greet them warmly, introduce yourself, and ask for their name: "Здравейте, аз съм Нелсън. Не мисля, че сме се запознавали. Как се казвате?"
 - Once they give their name, immediately use "register_user" to create their profile. Then continue the conversation naturally.
+
+VOLUME CONTROL:
+- You have a tool "adjust_volume" that controls how loud your voice is on a 0-10 scale (5 = normal, 0 = muted, 10 = maximum).
+- Your current volume level is 5 (normal) at the start of each call.
+- If the user says anything like "Не те чувам", "Говори по-силно", "По-високо", "Louder", or "I can't hear you", IMMEDIATELY call adjust_volume with a level 2 higher than the current level.
+- If the user says anything like "Много силно", "По-тихо", "Намали", "Quiet down", or "Too loud", IMMEDIATELY call adjust_volume with a level 2 lower than the current level.
+- After adjusting, briefly confirm: "Добре, усилих/намалих звука."
 
 CONVERSATION START:
 When the user connects, first call "get_user_profile" to load their data. If they are a returning user, greet them by name: "Здравейте, [име]! Как мога да ви помогна днес?" If they are new, follow the NEW CALLERS instructions above.`;
@@ -106,6 +114,22 @@ const TOOLS = [
         query: { type: "string", description: "The search query" },
       },
       required: ["query"],
+    },
+  },
+  {
+    type: "function" as const,
+    name: "adjust_volume",
+    description:
+      "Adjust the volume (loudness) of your voice output on a 0-10 scale. 0 = muted, 5 = normal (default), 10 = maximum loudness. Call this when the user asks you to speak louder or quieter.",
+    parameters: {
+      type: "object",
+      properties: {
+        level: {
+          type: "number",
+          description: "Volume level from 0 (muted) to 10 (max). Default is 5.",
+        },
+      },
+      required: ["level"],
     },
   },
 ];
@@ -254,6 +278,12 @@ async function registerUser(userId: string, name: string): Promise<string> {
   }
 }
 
+/** Map 0–10 volume level to a gain multiplier: 0→0.0, 5→1.0, 10→2.0 */
+function volumeToGain(level: number): number {
+  const clamped = Math.max(0, Math.min(10, level));
+  return clamped / 5;
+}
+
 const app = new Hono();
 const { injectWebSocket, upgradeWebSocket } = createNodeWebSocket({ app });
 
@@ -310,6 +340,9 @@ app.get(
     let lastAssistantItemId: string | null = null;
     const markQueue: string[] = [];
 
+    let currentVolumeLevel = 5;
+    let currentGain = 1.0;
+
     function getInstructions(): string {
       if (reminderId && reminderTitle) {
         return `You are Nelson, a warm, patient, and reliable AI voice assistant designed specifically for elderly people in Bulgaria. You are making an OUTBOUND call to remind the user about something.
@@ -332,6 +365,11 @@ YOUR CAPABILITIES & TOOLS:
 - REMINDERS: If they ask for a new reminder during the call, use "create_reminder".
 - MEMORY: If they tell you a fact, use "save_memory".
 - WEB SEARCH: If they ask a factual question, use "web_search".
+
+VOLUME CONTROL:
+- You have a tool "adjust_volume" that controls how loud your voice is on a 0-10 scale (5 = normal, 0 = muted, 10 = maximum).
+- If the user says they can't hear you or asks you to speak louder, call adjust_volume with a level 2 higher than current.
+- If the user says you're too loud, call adjust_volume with a level 2 lower than current.
 
 IMPORTANT: The caller is on a phone and CANNOT visit websites. Always give complete answers.`;
       }
@@ -382,14 +420,16 @@ IMPORTANT: The caller is on a phone and CANNOT visit websites. Always give compl
         switch (data.type) {
           case "response.output_audio.delta":
             if (streamSid && data.delta) {
+              const payload = currentGain === 1.0
+                ? data.delta
+                : applyGainToUlaw(data.delta, currentGain);
               twilioWs.send(
                 JSON.stringify({
                   event: "media",
                   streamSid,
-                  media: { payload: data.delta },
+                  media: { payload },
                 })
               );
-              // Track for interruption handling
               if (data.item_id) {
                 lastAssistantItemId = data.item_id;
               }
@@ -452,7 +492,15 @@ IMPORTANT: The caller is on a phone and CANNOT visit websites. Always give compl
               ws.send(JSON.stringify({ type: "response.create" }));
             };
 
-            if (data.name === "web_search") {
+            if (data.name === "adjust_volume") {
+              const level = Math.max(0, Math.min(10, Math.round(Number(args.level) || 5)));
+              currentVolumeLevel = level;
+              currentGain = volumeToGain(level);
+              console.log(`[Volume] Set to ${level}/10 (gain: ${currentGain.toFixed(2)}x)`);
+              handleToolResult(
+                JSON.stringify({ success: true, level: currentVolumeLevel, gain: currentGain })
+              );
+            } else if (data.name === "web_search") {
               searchWeb(args.query).then(handleToolResult);
             } else if (data.name === "create_reminder") {
               createReminder(callerPhone, args).then(handleToolResult);
