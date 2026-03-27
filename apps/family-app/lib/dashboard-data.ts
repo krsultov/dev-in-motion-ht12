@@ -8,6 +8,19 @@ export type HomeSummaryActivity = {
   description: string;
 };
 
+export type HomeSnapshotStat = {
+  id: string;
+  label: string;
+  value: string;
+};
+
+export type HomeUpcomingReminder = {
+  id: string;
+  title: string;
+  detail: string;
+  description: string;
+};
+
 export type LiveElderProfile = {
   initials: string;
   name: string;
@@ -56,6 +69,31 @@ function formatRelativeLabel(value: string) {
   return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
 }
 
+function formatCalendarLabel(value: Date) {
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+  }).format(value);
+}
+
+function formatReminderDetail(value: Date) {
+  const today = new Date();
+  const tomorrow = new Date();
+  tomorrow.setDate(today.getDate() + 1);
+
+  const dateKey = formatDateKey(value);
+
+  if (dateKey === formatDateKey(today)) {
+    return `Today at ${formatTimeLabel(value)}`;
+  }
+
+  if (dateKey === formatDateKey(tomorrow)) {
+    return `Tomorrow at ${formatTimeLabel(value)}`;
+  }
+
+  return `${formatCalendarLabel(value)} at ${formatTimeLabel(value)}`;
+}
+
 function toInitials(name?: string) {
   if (!name) {
     return 'FA';
@@ -97,6 +135,55 @@ export function buildCalendarActivities(reminders: ReminderRecord[]): CalendarAc
       } satisfies CalendarActivity;
     })
     .sort((left, right) => `${left.date} ${left.detail}`.localeCompare(`${right.date} ${right.detail}`));
+}
+
+export function buildDailySnapshot(
+  memoryRecord: UserMemoryRecord | null,
+  reminders: ReminderRecord[],
+): HomeSnapshotStat[] {
+  const todayKey = formatDateKey(new Date());
+  const remindersToday = reminders.filter((item) => {
+    const endTime = new Date(item.endTime);
+    return isValidDate(endTime) ? formatDateKey(endTime) === todayKey : false;
+  }).length;
+
+  return [
+    {
+      id: 'today-reminders',
+      label: 'Today',
+      value: `${remindersToday} reminder${remindersToday === 1 ? '' : 's'}`,
+    },
+    {
+      id: 'medications',
+      label: 'Medications',
+      value: `${memoryRecord?.medications.length ?? 0} on file`,
+    },
+    {
+      id: 'contacts',
+      label: 'Contacts',
+      value: `${memoryRecord?.contacts.length ?? 0} saved`,
+    },
+  ];
+}
+
+export function buildUpcomingReminder(reminders: ReminderRecord[]): HomeUpcomingReminder | null {
+  const now = Date.now();
+
+  const nextReminder = [...reminders]
+    .map((item) => ({ item, endTime: new Date(item.endTime) }))
+    .filter(({ endTime }) => isValidDate(endTime) && endTime.getTime() >= now)
+    .sort((left, right) => left.endTime.getTime() - right.endTime.getTime())[0];
+
+  if (!nextReminder) {
+    return null;
+  }
+
+  return {
+    description: nextReminder.item.description?.trim() || 'No extra details added for this reminder.',
+    detail: formatReminderDetail(nextReminder.endTime),
+    id: nextReminder.item._id,
+    title: nextReminder.item.title,
+  };
 }
 
 export function buildRecentActivity(reminders: ReminderRecord[]): HomeSummaryActivity[] {

@@ -52,7 +52,7 @@ export default function AuthScreen() {
             Welcome back
           </Text>
           <Text variant="bodyMedium" style={styles.cardText}>
-            Your account is created automatically the first time you call Nelson. If you haven't
+            Your account is created automatically the first time you call Nelson. If you haven&apos;t
             called yet, do that first — no sign-up needed.
           </Text>
 

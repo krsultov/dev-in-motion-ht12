@@ -8,8 +8,9 @@ import { StatusTag } from '@/components/status-tag';
 import { useAuth } from '@/context/auth-context';
 import {
   buildCalendarActivities,
+  buildDailySnapshot,
   buildElderProfile,
-  buildRecentActivity,
+  buildUpcomingReminder,
 } from '@/lib/dashboard-data';
 import { getCurrentUserMemory } from '@/lib/memory-api';
 import { listReminders } from '@/lib/reminders-api';
@@ -100,7 +101,8 @@ export default function HomeScreen() {
     [memoryRecord, user?.phone],
   );
   const calendarMonthActivities = useMemo(() => buildCalendarActivities(reminders), [reminders]);
-  const recentItems = useMemo(() => buildRecentActivity(reminders), [reminders]);
+  const dailySnapshot = useMemo(() => buildDailySnapshot(memoryRecord, reminders), [memoryRecord, reminders]);
+  const upcomingReminder = useMemo(() => buildUpcomingReminder(reminders), [reminders]);
   const todayKey = new Date().toISOString().slice(0, 10);
   const todayCount = calendarMonthActivities.filter((item) => item.date === todayKey).length;
 
@@ -162,34 +164,53 @@ export default function HomeScreen() {
 
       <View style={styles.sectionHeader}>
         <Text variant="titleMedium" style={styles.sectionTitle}>
-          Recent reminders
+          Daily snapshot
+        </Text>
+      </View>
+
+      <Card mode="outlined" style={styles.snapshotCard}>
+        <Card.Content style={styles.snapshotContent}>
+          {dailySnapshot.map((item) => (
+            <View key={item.id} style={styles.snapshotItem}>
+              <Text variant="bodySmall" style={styles.snapshotLabel}>
+                {item.label}
+              </Text>
+              <Text variant="titleMedium" style={styles.snapshotValue}>
+                {item.value}
+              </Text>
+            </View>
+          ))}
+        </Card.Content>
+      </Card>
+
+      <View style={styles.sectionHeader}>
+        <Text variant="titleMedium" style={styles.sectionTitle}>
+          Next up
         </Text>
       </View>
 
       <Card mode="outlined" style={styles.timelineCard}>
         <Card.Content style={styles.timelineContent}>
-          {recentItems.length > 0 ? (
-            recentItems.map((item, index) => (
-              <View key={item.id} style={styles.timelineRow}>
-                <View style={styles.timelineRail}>
-                  <View
-                    style={[styles.timelineDot, index === 1 ? styles.timelineDotSecondary : null]}
-                  />
-                  {index < recentItems.length - 1 ? <View style={styles.timelineLine} /> : null}
-                </View>
-                <View style={styles.timelineTextBlock}>
-                  <Text variant="titleSmall" style={styles.timelineTitle}>
-                    {item.title}
-                  </Text>
-                  <Text variant="bodySmall" style={styles.timelineDescription}>
-                    {item.description}
-                  </Text>
-                </View>
+          {upcomingReminder ? (
+            <View style={styles.nextUpBlock}>
+              <View style={styles.nextUpBadge}>
+                <Text variant="bodySmall" style={styles.nextUpBadgeText}>
+                  Upcoming reminder
+                </Text>
               </View>
-            ))
+              <Text variant="titleMedium" style={styles.nextUpTitle}>
+                {upcomingReminder.title}
+              </Text>
+              <Text variant="bodyMedium" style={styles.nextUpDetail}>
+                {upcomingReminder.detail}
+              </Text>
+              <Text variant="bodySmall" style={styles.timelineDescription}>
+                {upcomingReminder.description}
+              </Text>
+            </View>
           ) : (
             <Text variant="bodyMedium" style={styles.emptyText}>
-              No reminders yet.
+              No upcoming reminders yet.
             </Text>
           )}
         </Card.Content>
@@ -279,8 +300,62 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     marginBottom: 16,
   },
+  snapshotCard: {
+    backgroundColor: '#1E1E1E',
+    borderColor: '#303038',
+    borderRadius: 18,
+    marginBottom: 18,
+  },
+  snapshotContent: {
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'space-between',
+  },
+  snapshotItem: {
+    backgroundColor: '#171717',
+    borderColor: '#2D2D2D',
+    borderRadius: 16,
+    borderWidth: 1,
+    flex: 1,
+    gap: 8,
+    minHeight: 98,
+    padding: 14,
+  },
+  snapshotLabel: {
+    color: '#8A8A96',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  snapshotValue: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    lineHeight: 24,
+  },
   timelineContent: {
     gap: 16,
+  },
+  nextUpBlock: {
+    gap: 10,
+  },
+  nextUpBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#23244D',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  nextUpBadgeText: {
+    color: '#CDCFFC',
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  nextUpTitle: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  nextUpDetail: {
+    color: '#D4F4E4',
+    fontWeight: '600',
   },
   timelineRow: {
     flexDirection: 'row',
