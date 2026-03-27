@@ -10,6 +10,11 @@ if (!OPENAI_API_KEY) {
   process.exit(1);
 }
 
+const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY;
+if (!PERPLEXITY_API_KEY) {
+  console.warn("Missing PERPLEXITY_API_KEY — web search will be unavailable");
+}
+
 const SYSTEM_INSTRUCTIONS = `You are Nelson, a warm, patient, and reliable AI voice assistant designed specifically for elderly people in Bulgaria. They are calling you from a standard telephone.
 
 CORE RULES:
@@ -21,6 +26,7 @@ CORE RULES:
 YOUR CAPABILITIES & TOOLS:
 - REMINDERS: If the caller asks you to remind them of something (e.g., taking medicine, feeding the dog, a doctor's appointment), immediately use the "create_reminder" tool.
 - MEMORY: If they tell you a fact about themselves (e.g., "My doctor is Dr. Petrov" or "My knee hurts today"), acknowledge it warmly and use the appropriate tool to save it to their profile.
+- WEB SEARCH: If the caller asks a factual question you are unsure about (e.g., weather, news, general knowledge), use the "web_search" tool to find the answer. Summarize the result in 1-2 short sentences.
 
 CONVERSATION START:
 If the user has just connected, always start by greeting them warmly and simply, for example: "Здравейте, аз съм Нелсън. Как мога да ви помогна днес?" (Do not repeat this if the conversation has already started).`;
@@ -39,7 +45,52 @@ const TOOLS = [
       required: ["task", "time"],
     },
   },
+  {
+    type: "function" as const,
+    name: "web_search",
+    description:
+      "Search the web for current information (news, weather, facts, etc.)",
+    parameters: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "The search query" },
+      },
+      required: ["query"],
+    },
+  },
 ];
+
+async function searchWeb(query: string): Promise<string> {
+  if (!PERPLEXITY_API_KEY) {
+    return "Търсенето в интернет не е налично в момента.";
+  }
+  try {
+    const res = await fetch("https://api.perplexity.ai/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${PERPLEXITY_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "sonar",
+        messages: [{ role: "user", content: query }],
+      }),
+    });
+    if (!res.ok) {
+      console.error(`Perplexity API error: ${res.status} ${res.statusText}`);
+      return "Не успях да намеря информация в момента.";
+    }
+    const json = await res.json();
+    const answer = json.choices?.[0]?.message?.content ?? "";
+
+    console.log(answer);
+
+    return answer || "Не бяха намерени резултати.";
+  } catch (err) {
+    console.error("Perplexity search failed:", err);
+    return "Не успях да направя търсене в момента.";
+  }
+}
 
 const app = new Hono();
 const { injectWebSocket, upgradeWebSocket } = createNodeWebSocket({ app });
@@ -103,6 +154,8 @@ app.get(
             },
           })
         );
+        // Trigger the initial greeting immediately
+        ws.send(JSON.stringify({ type: "response.create" }));
       });
 
       ws.on("message", (raw) => {
@@ -164,23 +217,36 @@ app.get(
             console.log(
               `Tool call: ${data.name}(${data.arguments})`
             );
-            // Acknowledge the tool call with a result
             const callId = data.call_id;
-            ws.send(
-              JSON.stringify({
-                type: "conversation.item.create",
-                item: {
-                  type: "function_call_output",
-                  call_id: callId,
-                  output: JSON.stringify({
-                    success: true,
-                    message: "Напомнянето е създадено.",
-                  }),
-                },
-              })
-            );
-            // Trigger a new response after the tool result
-            ws.send(JSON.stringify({ type: "response.create" }));
+            const args = JSON.parse(data.arguments);
+
+            const handleToolResult = (output: string) => {
+              ws.send(
+                JSON.stringify({
+                  type: "conversation.item.create",
+                  item: {
+                    type: "function_call_output",
+                    call_id: callId,
+                    output,
+                  },
+                })
+              );
+              ws.send(JSON.stringify({ type: "response.create" }));
+            };
+
+            if (data.name === "web_search") {
+              searchWeb(args.query).then((result) => {
+                handleToolResult(result);
+              });
+            } else {
+              // create_reminder and other tools
+              handleToolResult(
+                JSON.stringify({
+                  success: true,
+                  message: "Напомнянето е създадено.",
+                })
+              );
+            }
             break;
           }
 
