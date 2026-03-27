@@ -61,6 +61,7 @@ async function createUserData(input: {
   phone: string;
   password: string;
   name?: string;
+  subscription?: boolean;
   memories?: unknown[];
   contacts?: unknown[];
   preferences?: unknown[];
@@ -79,6 +80,7 @@ async function getUserData(_id: string): Promise<UserDataResponse> {
 async function updateUserData(input: {
   _id: string;
   phone?: string;
+  subscription?: boolean;
   name?: string;
   memories?: unknown[];
   contacts?: unknown[];
@@ -128,6 +130,7 @@ function getServer(): McpServer {
         phone: z.string().min(1),
         password: z.string().min(1),
         name: z.string().optional(),
+        subscription: z.boolean().optional(),
         memories: z.array(z.string()).optional(),
         contacts: z.array(z.object({ name: z.string(), role: z.string(), phone: z.string() })).optional(),
         preferences: z.array(z.object({ label: z.string(), value: z.string() })).optional(),
@@ -196,6 +199,7 @@ function getServer(): McpServer {
       inputSchema: {
         _id: z.string().min(1),
         phone: z.string().optional(),
+        subscription: z.boolean().optional(),
         name: z.string().optional(),
         memories: z.array(z.string()).optional(),
         contacts: z.array(z.object({ name: z.string(), role: z.string(), phone: z.string() })).optional(),

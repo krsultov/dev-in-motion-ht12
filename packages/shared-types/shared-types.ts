@@ -41,6 +41,7 @@ export type UserMemory = {
   phone: string;
   password: string;
   name?: string;
+  subscription?: boolean;
   memories?: string[];
   contacts?: Contact[];
   preferences?: Preference[];
@@ -67,6 +68,7 @@ export type UserDataResponse = {
     phone?: string;
     password?: string;
     name?: string;
+    subscription?: boolean;
     memories: unknown[];
     contacts: unknown[];
     preferences: unknown[];

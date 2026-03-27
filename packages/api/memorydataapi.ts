@@ -15,6 +15,7 @@ function normalize(doc: UserMemoryDoc) {
     phone: doc.phone,
     password: doc.password,
     name: doc.name,
+    subscription: doc.subscription,
     memories: doc.memories ?? [],
     contacts: doc.contacts ?? [],
     preferences: doc.preferences ?? [],
@@ -42,6 +43,7 @@ app.post("/userData", async (req: any, res: any) => {
     if (typeof req.body?.phone === "string") toInsert.phone = req.body.phone;
     if (typeof req.body?.password === "string") toInsert.password = req.body.password;
     if (typeof req.body?.name === "string") toInsert.name = req.body.name;
+    if (typeof req.body?.subscription === "boolean") toInsert.subscription = req.body.subscription;
     if (Array.isArray(req.body?.memories)) toInsert.memories = req.body.memories;
     if (Array.isArray(req.body?.contacts)) toInsert.contacts = req.body.contacts;
     if (Array.isArray(req.body?.preferences)) toInsert.preferences = req.body.preferences;
@@ -122,6 +124,7 @@ app.put("/userData/:_id", async (req: any, res: any) => {
     if (typeof req.body?.phone === "string") $set.phone = req.body.phone;
     if (typeof req.body?.password === "string") $set.password = req.body.password;
     if (typeof req.body?.name === "string") $set.name = req.body.name;
+    if (typeof req.body?.subscription === "boolean") $set.subscription = req.body.subscription;
     if (Array.isArray(req.body?.memories)) $set.memories = req.body.memories;
     if (Array.isArray(req.body?.contacts)) $set.contacts = req.body.contacts;
     if (Array.isArray(req.body?.preferences)) $set.preferences = req.body.preferences;
