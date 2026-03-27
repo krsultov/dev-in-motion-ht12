@@ -4,38 +4,35 @@ import { router } from 'expo-router';
 import { Button, Surface, Text, TextInput } from 'react-native-paper';
 
 import { useAuth } from '@/context/auth-context';
-
-type AuthMode = 'register' | 'signin';
+import { getCurrentUserMemory } from '@/lib/memory-api';
 
 export default function AuthScreen() {
-  const [mode, setMode] = useState<AuthMode>('register');
-  const [name, setName] = useState<string>('');
   const [phone, setPhone] = useState<string>('');
-  const [password, setPassword] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(false);
   const { signIn } = useAuth();
 
-  const isRegisterMode = mode === 'register';
-
-  const handleContinue = () => {
-    const trimmedName = name.trim();
+  const handleSignIn = async () => {
     const trimmedPhone = phone.trim();
-    const trimmedPassword = password.trim();
 
-    if (isRegisterMode && (!trimmedName || !trimmedPhone || !trimmedPassword)) {
-      Alert.alert('Missing details', 'Enter your name, phone number, and password to continue.');
-      return;
-    }
-
-    if (!isRegisterMode && !trimmedPhone) {
+    if (!trimmedPhone) {
       Alert.alert('Missing details', 'Enter your phone number to continue.');
       return;
     }
 
-    signIn({
-      name: isRegisterMode ? trimmedName : trimmedName || 'Family member',
-      phone: trimmedPhone,
-    });
-    router.replace('/(tabs)/home');
+    setIsLoading(true);
+    try {
+      const record = await getCurrentUserMemory(trimmedPhone);
+      if (!record) {
+        Alert.alert('Not found', 'No account found for that phone number.');
+        return;
+      }
+      signIn({ name: record.name ?? 'Family member', phone: trimmedPhone });
+      router.replace('/(tabs)/home');
+    } catch {
+      Alert.alert('Error', 'Could not reach the server. Make sure the backend is running.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -47,51 +44,17 @@ export default function AuthScreen() {
           Nelson
         </Text>
         <Text variant="bodyLarge" style={styles.subtitle}>
-          A simple family access flow for the app. Register and sign in are design-only and do not
-          enforce real backend authentication.
+          Sign in with the phone number linked to your Nelson account.
         </Text>
 
         <Surface style={styles.card} elevation={1}>
-          <View style={styles.modeSwitcher}>
-            <Button
-              mode={isRegisterMode ? 'contained' : 'text'}
-              buttonColor={isRegisterMode ? '#8B8DF1' : '#232325'}
-              textColor={isRegisterMode ? '#18181B' : '#FFFFFF'}
-              style={styles.modeButton}
-              onPress={() => setMode('register')}>
-              Register
-            </Button>
-            <Button
-              mode={!isRegisterMode ? 'contained' : 'text'}
-              buttonColor={!isRegisterMode ? '#8B8DF1' : '#232325'}
-              textColor={!isRegisterMode ? '#18181B' : '#FFFFFF'}
-              style={styles.modeButton}
-              onPress={() => setMode('signin')}>
-              Sign In
-            </Button>
-          </View>
-
           <Text variant="titleMedium" style={styles.cardTitle}>
-            {isRegisterMode ? 'Create family access' : 'Welcome back'}
+            Welcome back
           </Text>
           <Text variant="bodyMedium" style={styles.cardText}>
-            {isRegisterMode
-              ? 'Create a simple local account to enter the family dashboard.'
-              : 'Sign in with your phone number to reopen the dashboard.'}
+            Your account is created automatically the first time you call Nelson. If you haven't
+            called yet, do that first — no sign-up needed.
           </Text>
-
-          {isRegisterMode ? (
-            <TextInput
-              label="Full name"
-              mode="outlined"
-              autoCapitalize="words"
-              textColor="#FFFFFF"
-              outlineColor="#2D2D2D"
-              activeOutlineColor="#8B8DF1"
-              value={name}
-              onChangeText={setName}
-            />
-          ) : null}
 
           <TextInput
             label="Phone number"
@@ -104,31 +67,16 @@ export default function AuthScreen() {
             onChangeText={setPhone}
           />
 
-          {isRegisterMode ? (
-            <TextInput
-              label="Password"
-              mode="outlined"
-              secureTextEntry
-              textColor="#FFFFFF"
-              outlineColor="#2D2D2D"
-              activeOutlineColor="#8B8DF1"
-              value={password}
-              onChangeText={setPassword}
-            />
-          ) : null}
-
           <Button
             mode="contained"
             buttonColor="#8B8DF1"
             textColor="#18181B"
             style={styles.submitButton}
-            onPress={handleContinue}>
-            {isRegisterMode ? 'Register' : 'Sign In'}
+            loading={isLoading}
+            disabled={isLoading}
+            onPress={() => void handleSignIn()}>
+            Sign In
           </Button>
-
-          <Text variant="bodySmall" style={styles.hint}>
-            No real authentication is enforced. This only controls entry into the app UI.
-          </Text>
         </Surface>
       </View>
     </KeyboardAvoidingView>
@@ -161,17 +109,6 @@ const styles = StyleSheet.create({
     gap: 16,
     padding: 20,
   },
-  modeSwitcher: {
-    backgroundColor: '#171717',
-    borderRadius: 16,
-    flexDirection: 'row',
-    gap: 10,
-    padding: 6,
-  },
-  modeButton: {
-    borderRadius: 12,
-    flex: 1,
-  },
   cardTitle: {
     color: '#FFFFFF',
     fontWeight: '700',
@@ -183,9 +120,5 @@ const styles = StyleSheet.create({
   submitButton: {
     borderRadius: 14,
     marginTop: 4,
-  },
-  hint: {
-    color: '#7C7C87',
-    lineHeight: 18,
   },
 });

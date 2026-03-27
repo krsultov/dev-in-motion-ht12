@@ -14,7 +14,7 @@ const familyAccountProfile = {
   notificationPreferences: [
     { id: 'purchases', label: 'Purchases', enabled: true },
     { id: 'wellness-alerts', label: 'Wellness Alerts', enabled: true },
-    { id: 'unusual-activity', label: 'Unusual Activity', enabled: false },
+    { id: 'unusual-activity', label: 'Unusual Activity', enabled: true },
   ],
   permissionLevel: 'Local Frontend Access',
   relationshipLabel: 'Family member',
