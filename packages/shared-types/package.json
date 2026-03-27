@@ -2,11 +2,24 @@
   "name": "@nelson/shared-types",
   "version": "0.0.1",
   "private": true,
-  "description": "Zod schemas: UserProfile, CallSession, MemoryItem, Reminder",
+  "description": "Shared TypeScript types for Mongo documents and API DTOs",
   "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
   "scripts": {
     "build": "echo 'TODO: setup build script'",
     "lint": "echo 'TODO: setup lint'",
     "typecheck": "echo 'TODO: setup typecheck'"
+  },
+  "peerDependencies": {
+    "mongodb": "^7.1.1"
+  },
+  "devDependencies": {
+    "mongodb": "^7.1.1"
   }
 }

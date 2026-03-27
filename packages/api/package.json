@@ -8,5 +8,16 @@
     "build": "echo 'TODO: setup build script'",
     "lint": "echo 'TODO: setup lint'",
     "typecheck": "echo 'TODO: setup typecheck'"
+  },
+  "dependencies": {
+    "@agendajs/mongo-backend": "^4.0.0",
+    "@nelson/shared-types": "file:../shared-types",
+    "agenda": "^6.2.3",
+    "cron-parser": "^5.5.0",
+    "express": "^5.2.1",
+    "mongodb": "^7.1.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6"
   }
 }

@@ -3,21 +3,35 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { createMcpExpressApp } from "@modelcontextprotocol/sdk/server/express.js";
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod/v4";
+import type { MemoryEntry } from "@nelson/shared-types";
 
 declare const process: {
   env: Record<string, string | undefined>;
   exit: (code?: number) => never;
 };
 
-type MemoryEntry = {
-  id: string;
-  key: string;
-  value: string;
-  createdAt: string;
-  updatedAt: string;
-};
 
-const memories = new Map<string, MemoryEntry>();
+async function listMemories(): Promise<MemoryEntry[]> {
+  const baseUrl = process.env.MEMORY_API_BASE_URL ?? "http://localhost:3001";
+  const res = await fetch(`${baseUrl}/memories`);
+  if (!res.ok) {
+    throw new Error(`Memory API GET /memories failed: ${res.status} ${await res.text().catch(() => "")}`);
+  }
+  return (await res.json()) as MemoryEntry[];
+}
+
+async function addOrUpdateMemory(key: string, value: string): Promise<MemoryEntry> {
+  const baseUrl = process.env.MEMORY_API_BASE_URL ?? "http://localhost:3001";
+  const res = await fetch(`${baseUrl}/memories`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ key, value }),
+  });
+  if (!res.ok) {
+    throw new Error(`Memory API POST /memories failed: ${res.status} ${await res.text().catch(() => "")}`);
+  }
+  return (await res.json()) as MemoryEntry;
+}
 
 function makeId(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -58,7 +72,7 @@ function getServer(): McpServer {
       mimeType: "application/json",
     },
     async () => {
-      const data = Array.from(memories.values());
+      const data = await listMemories();
       return {
         contents: [
           {
@@ -81,25 +95,11 @@ function getServer(): McpServer {
       },
     },
     async ({ key, value }) => {
-      const existing = Array.from(memories.values()).find((m) => m.key === key);
-      if (existing) {
-        existing.value = value;
-        existing.updatedAt = nowIso();
-        memories.set(existing.id, existing);
-      } else {
-        const t = nowIso();
-        const created: MemoryEntry = {
-          id: makeId(),
-          key,
-          value,
-          createdAt: t,
-          updatedAt: t,
-        };
-        memories.set(created.id, created);
-      }
+      await addOrUpdateMemory(key, value);
+      const all = await listMemories();
       server.sendResourceListChanged();
       return {
-        content: [{ type: "text", text: JSON.stringify(Array.from(memories.values()), null, 2) }],
+        content: [{ type: "text", text: JSON.stringify(all, null, 2) }],
       };
     }
   );
@@ -110,8 +110,9 @@ function getServer(): McpServer {
       description: "List all memory entries.",
     },
     async () => {
+      const all = await listMemories();
       return {
-        content: [{ type: "text", text: JSON.stringify(Array.from(memories.values()), null, 2) }],
+        content: [{ type: "text", text: JSON.stringify(all, null, 2) }],
       };
     }
   );
@@ -119,29 +120,20 @@ function getServer(): McpServer {
   return server;
 }
 
-function readSessionId(header: string | null): string | undefined {
-  return header ?? undefined;
+function readSessionId(header: unknown): string | undefined {
+  if (typeof header === "string") return header;
+  if (Array.isArray(header) && typeof header[0] === "string") return header[0];
+  return undefined;
 }
 
 const app = createMcpExpressApp();
 const transports: Record<string, StreamableHTTPServerTransport> = {};
 
-type McpHttpRequest = {
-  headers: Headers;
-  body: unknown;
-};
-
-type McpHttpResponse = {
-  headersSent: boolean;
-  status: (code: number) => {
-    json: (payload: unknown) => void;
-    send: (payload: string) => void;
-  };
-};
-
-app.post("/mcp", async ({ req, res }: { req: McpHttpRequest; res: McpHttpResponse }) => {
+app.post("/mcp", async (req: any, res: any) => {
   try {
-    const sessionId = readSessionId(req.headers.get("mcp-session-id"));
+    const headerVal =
+      typeof req?.get === "function" ? req.get("mcp-session-id") : (req?.headers?.["mcp-session-id"] ?? undefined);
+    const sessionId = readSessionId(headerVal);
     let transport: StreamableHTTPServerTransport | undefined;
 
     if (sessionId && transports[sessionId]) {
@@ -184,8 +176,10 @@ app.post("/mcp", async ({ req, res }: { req: McpHttpRequest; res: McpHttpRespons
   }
 });
 
-app.get("/mcp", async ({ req, res }: { req: McpHttpRequest; res: McpHttpResponse }) => {
-  const sessionId = readSessionId(req.headers.get("mcp-session-id"));
+app.get("/mcp", async (req: any, res: any) => {
+  const headerVal =
+    typeof req?.get === "function" ? req.get("mcp-session-id") : (req?.headers?.["mcp-session-id"] ?? undefined);
+  const sessionId = readSessionId(headerVal);
   if (!sessionId || !transports[sessionId]) {
     res.status(400).send("Invalid or missing session ID");
     return;
@@ -193,8 +187,10 @@ app.get("/mcp", async ({ req, res }: { req: McpHttpRequest; res: McpHttpResponse
   await transports[sessionId].handleRequest(req, res);
 });
 
-app.delete("/mcp", async ({ req, res }: { req: McpHttpRequest; res: McpHttpResponse }) => {
-  const sessionId = readSessionId(req.headers.get("mcp-session-id"));
+app.delete("/mcp", async (req: any, res: any) => {
+  const headerVal =
+    typeof req?.get === "function" ? req.get("mcp-session-id") : (req?.headers?.["mcp-session-id"] ?? undefined);
+  const sessionId = readSessionId(headerVal);
   if (!sessionId || !transports[sessionId]) {
     res.status(400).send("Invalid or missing session ID");
     return;

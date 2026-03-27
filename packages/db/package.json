@@ -10,6 +10,7 @@
     "typecheck": "echo 'TODO: setup typecheck'"
   },
   "dependencies": {
+    "@nelson/shared-types": "file:../shared-types",
     "mongodb": "^7.1.1"
   }
 }

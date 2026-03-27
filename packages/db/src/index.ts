@@ -1,4 +1,7 @@
-import { MongoClient, type Db, type MongoClientOptions } from "mongodb";
+import { MongoClient, type Db, type MongoClientOptions, type Collection } from "mongodb";
+import type { UserMemory } from "@nelson/shared-types";
+
+export type { UserMemory };
 
 declare const process: {
   env: Record<string, string | undefined>;
@@ -6,6 +9,7 @@ declare const process: {
 
 let mongoClient: MongoClient | undefined;
 let mongoClientPromise: Promise<MongoClient> | undefined;
+let envLoaded = false;
 
 function readMongoUri(): string {
   const uri = process.env.MONGO_URI;
@@ -13,6 +17,38 @@ function readMongoUri(): string {
     throw new Error("Missing MONGO_URI environment variable");
   }
   return uri;
+}
+
+async function loadRootEnvIfNeeded() {
+  if (envLoaded) return;
+  envLoaded = true;
+
+  if (process.env.MONGO_URI) return;
+
+  try {
+    const { readFileSync } = await import("fs");
+    const { dirname, resolve } = await import("path");
+    const { fileURLToPath } = await import("url");
+
+    const __dirname = dirname(fileURLToPath(import.meta.url));
+    const envPath = resolve(__dirname, "..", "..", "..", ".env");
+
+    const contents = readFileSync(envPath, "utf-8");
+    for (const line of contents.split("\n")) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+
+      const eqIdx = trimmed.indexOf("=");
+      if (eqIdx === -1) continue;
+
+      const key = trimmed.slice(0, eqIdx).trim();
+      const val = trimmed.slice(eqIdx + 1).trim().replace(/^[\"']|[\"']$/g, "");
+
+      if (!process.env[key]) {
+        process.env[key] = val;
+      }
+    }
+  }catch {}
 }
 
 function getPoolOptions() {
@@ -36,6 +72,7 @@ export async function getMongoClient(): Promise<MongoClient> {
   }
 
   if (!mongoClientPromise) {
+    await loadRootEnvIfNeeded();
     const client = new MongoClient(readMongoUri(), getPoolOptions() as MongoClientOptions);
     mongoClientPromise = client.connect().then(() => {
       mongoClient = client;
@@ -61,4 +98,22 @@ export async function closeMongoClient(): Promise<void> {
 
   mongoClient = undefined;
   mongoClientPromise = undefined;
+}
+
+export const USER_MEMORY_COLLECTION = "UserMemory";
+
+
+
+let userMemoryCollectionPromise: Promise<Collection<UserMemory>> | undefined;
+
+export async function CallUserMemory(): Promise<Collection<UserMemory>> {
+  if (!userMemoryCollectionPromise) {
+    userMemoryCollectionPromise = (async () => {
+      const db = await getDb();
+      const collection = db.collection<UserMemory>(USER_MEMORY_COLLECTION);
+      return collection;
+    })();
+  }
+
+  return userMemoryCollectionPromise;
 }
