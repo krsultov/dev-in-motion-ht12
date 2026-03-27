@@ -45,13 +45,13 @@ Nelson is a **voice-first AI agent platform** with three layers:
 - **Fully Bulgarian** — understands natural spoken Bulgarian including regional speech
 - **Persistent memory** — *"Remember that my doctor is Dr. Petrov in Plovdiv"* — recalled forever
 - **Proactive callbacks** — agent calls *you* back for reminders, not just the other way around
-- **SOS escalation** — say *"I need help"* → 112 called + all family contacts alerted simultaneously
+- **SOS escalation** *(planned)* — say *"I need help"* → 112 called + all family contacts alerted simultaneously
 
 ### What the agent can do on a call
 - **Research** — weather, bus times, pharmacy hours, news, government procedures, anything
 - **Reminders** — *"Remind me to take my pills every day at 8am"* → Nelson calls you
 - **Memory** — builds a living profile from every conversation
-- **Emergency** — instant escalation with parallel notification to all trusted contacts
+- **Emergency** *(planned)* — instant escalation with parallel notification to all trusted contacts
 
 ### 👨‍👩‍👧 Family App
 - **LifeCard** — set up your relative's profile: health, meds, contacts, preferences
@@ -60,8 +60,8 @@ Nelson is a **voice-first AI agent platform** with three layers:
 
 ### 🖥️ Operator Dashboard
 - **Cost tracker** — GPT Realtime costs per call and per user
-- **Open SOS log** — emergency events with timestamps and outcomes
-- **Agent health** — failed calls, low-confidence turns, timeout alerts
+- **Open SOS log** *(planned)* — emergency events with timestamps and outcomes
+- **Agent health** *(planned)* — failed calls, low-confidence turns, timeout alerts
 
 ---
 
@@ -78,15 +78,13 @@ nelson/
 ├─ apps/
 │  ├─ family-app/           # Expo (iOS + Android + Web) — family portal
 │  ├─ ops-dashboard/        # operator monitoring dashboard
-│  ├─ voice-gateway/        # Hono.js - call entrypoint, STT/TTS pipeline
+│  ├─ voice-gateway/        # Hono.js — call entrypoint, STT/TTS pipeline
 │
 ├─ packages/
-│  ├─ agent-core/           # LLM orchestration, prompt, tool calling
-│  ├─ mcp/    # MCP servers
-│  ├─ reminders-domain/     # Scheduler, outbound call jobs
-│  ├─ api/     # APIs for MCP servers in ExpressJS
-│  ├─ shared-types/         # Zod schemas
+│  ├─ api/                  # Hono.js APIs for memory & reminders
 │  ├─ db/                   # MongoDB pool
+│  ├─ mcp/                  # MCP servers
+│  ├─ shared-types/         # Shared TypeScript type definitions
 │
 ├─ Dockerfile
 └─ README.md                ← you are here
@@ -103,7 +101,7 @@ nelson/
 | Mobile + Web App | Expo (React Native) |
 | Operator Dashboard | Next.js |
 | API | Hono.js |
-| Database | MongoDB / custom RAG implementation |
+| Database | MongoDB |
 | Telephony | Twilio |
 | Agent tool protocol | Model Context Protocol (MCP) |
 | Realtime | WebSockets |
