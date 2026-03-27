@@ -13,6 +13,7 @@ export type UserRecord = {
   medications?: unknown[]
   preferences?: unknown[]
   memoriesCount?: number
+  callMinutes?: number
   createdAt: string
   updatedAt: string
 }
@@ -75,11 +76,28 @@ async function getStats(): Promise<StatsOverview | null> {
   }
 }
 
+async function getCallMinutesByUser(): Promise<Record<string, number>> {
+  try {
+    const res = await fetch(
+      `${process.env.MEMORIES_API_URL ?? 'http://localhost:3001'}/stats/call-minutes-by-user`,
+      { cache: 'no-store' },
+    )
+    if (!res.ok) return {}
+    return res.json()
+  } catch {
+    return {}
+  }
+}
+
 export default async function UsersPage() {
-  const [users, stats] = await Promise.all([getUsers(), getStats()])
+  const [users, stats, callMinutesByUser] = await Promise.all([getUsers(), getStats(), getCallMinutesByUser()])
 
   const memoryCounts = await Promise.all(users.map((u) => getMemoryCount(u.phone)))
-  const usersWithCounts = users.map((u, i) => ({ ...u, memoriesCount: memoryCounts[i] }))
+  const usersWithCounts = users.map((u, i) => ({
+    ...u,
+    memoriesCount: memoryCounts[i],
+    callMinutes: callMinutesByUser[u.phone] ?? 0,
+  }))
 
   const subscriptionUsers = stats?.planDistribution.subscription
     ?? users.filter((u) => getPlan(u).type === 'subscription').length

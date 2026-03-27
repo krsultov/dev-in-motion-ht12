@@ -131,7 +131,7 @@ export function UsersTable({ users }: { users: UserRecord[] }) {
             <div className="grid grid-cols-2 gap-2 mb-5">
               {[
                 { label: 'Memories', value: selected.memoriesCount ?? 0 },
-                { label: 'Min. Talked', value: '—' },
+                { label: 'Min. Talked', value: selected.callMinutes ?? 0 },
               ].map((s, i) => (
                 <div key={s.label} className="animate-fade-up bg-[#27272a] rounded-xl p-3 border border-zinc-800 text-center" style={{ animationDelay: `${80 + i * 50}ms` }}>
                   <p className="text-white font-bold text-lg leading-none">{s.value}</p>

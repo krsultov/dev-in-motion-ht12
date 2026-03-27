@@ -296,6 +296,26 @@ app.get('/stats/overview', async (c) => {
   }
 })
 
+app.get('/stats/call-minutes-by-user', async (c) => {
+  try {
+    const callEventsCol = await getCallEventsCollection()
+    const agg = await (callEventsCol as any)
+      .aggregate([
+        { $match: { durationSec: { $exists: true, $gt: 0 } } },
+        { $group: { _id: '$userId', totalSec: { $sum: '$durationSec' } } },
+      ])
+      .toArray()
+
+    const result: Record<string, number> = {}
+    for (const row of agg) {
+      result[row._id] = Math.round(row.totalSec / 60)
+    }
+    return c.json(result)
+  } catch (error) {
+    return c.json({ error: (error as Error).message }, 500)
+  }
+})
+
 const PORT = Number(process.env.PORT ?? 3001)
 serve({ fetch: app.fetch, port: PORT }, () => {
   console.log(`Memory REST API running at http://localhost:${PORT}`)
