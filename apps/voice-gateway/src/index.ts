@@ -45,7 +45,11 @@ const app = new Hono();
 const { injectWebSocket, upgradeWebSocket } = createNodeWebSocket({ app });
 
 // Twilio webhook — returns TwiML to connect the call to a media stream
-app.post("/incoming-call", (c) => {
+app.post("/incoming-call", async (c) => {
+  const body = await c.req.parseBody();
+  const from = body["From"] ?? "unknown";
+  const to = body["To"] ?? "unknown";
+  console.log(`Incoming call from ${from} to ${to}`);
   const host = c.req.header("Host") ?? "localhost:3000";
   const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
