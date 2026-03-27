@@ -15,6 +15,9 @@ if (!PERPLEXITY_API_KEY) {
   console.warn("Missing PERPLEXITY_API_KEY — web search will be unavailable");
 }
 
+const REMINDERS_API_URL = process.env.REMINDERS_API_URL ?? "http://localhost:3004";
+const MEMORY_API_URL = process.env.MEMORY_API_URL ?? "http://localhost:3001";
+
 const SYSTEM_INSTRUCTIONS = `You are Nelson, a warm, patient, and reliable AI voice assistant designed specifically for elderly people in Bulgaria. They are calling you from a standard telephone.
 
 CORE RULES:
@@ -24,8 +27,9 @@ CORE RULES:
 4. NO FORMATTING: Never use markdown, asterisks (*), hashtags (#), or bullet points. Write numbers and acronyms in a way that is easy to read aloud.
 
 YOUR CAPABILITIES & TOOLS:
-- REMINDERS: If the caller asks you to remind them of something (e.g., taking medicine, feeding the dog, a doctor's appointment), immediately use the "create_reminder" tool.
-- MEMORY: If they tell you a fact about themselves (e.g., "My doctor is Dr. Petrov" or "My knee hurts today"), acknowledge it warmly and use the appropriate tool to save it to their profile.
+- REMINDERS: If the caller asks you to remind them of something (e.g., taking medicine, feeding the dog, a doctor's appointment), immediately use the "create_reminder" tool. You must determine the appropriate startTime and endTime from the conversation context.
+- MEMORY: If they tell you a fact about themselves (e.g., "My doctor is Dr. Petrov" or "My knee hurts today"), acknowledge it warmly and use the "save_memory" tool to save it.
+- PROFILE: At the START of each conversation, use the "get_user_profile" tool to load the caller's saved memories and upcoming reminders. Use this context to personalize the conversation.
 - WEB SEARCH: If the caller asks a factual question you are unsure about (e.g., weather, news, general knowledge), use the "web_search" tool to find the answer. Summarize the result in 1-2 short sentences.
 
 IMPORTANT RULES:
@@ -33,20 +37,44 @@ IMPORTANT RULES:
 - When asked about Bulgarian train schedules or timetables, search for "БДЖ разписание" along with the specific route. Give the exact departure and arrival times.
 
 CONVERSATION START:
-If the user has just connected, always start by greeting them warmly and simply, for example: "Здравейте, аз съм Нелсън. Как мога да ви помогна днес?" (Do not repeat this if the conversation has already started).`;
+When the user connects, first call "get_user_profile" to load their data. Then greet them warmly, for example: "Здравейте, аз съм Нелсън. Как мога да ви помогна днес?" If you already know their name from their profile, use it in the greeting.`;
 
 const TOOLS = [
   {
     type: "function" as const,
     name: "create_reminder",
-    description: "Create a reminder for the user",
+    description: "Create a reminder for the user. Determine the appropriate startTime and endTime from the conversation.",
     parameters: {
       type: "object",
       properties: {
-        task: { type: "string", description: "What to remind about" },
-        time: { type: "string", description: "When (ISO 8601)" },
+        title: { type: "string", description: "What to remind about" },
+        startTime: { type: "string", description: "When the reminder should fire (ISO 8601)" },
+        endTime: { type: "string", description: "When the reminder period ends (ISO 8601). Can be the same as startTime for one-time reminders." },
+        description: { type: "string", description: "Additional details about the reminder" },
       },
-      required: ["task", "time"],
+      required: ["title", "startTime", "endTime"],
+    },
+  },
+  {
+    type: "function" as const,
+    name: "save_memory",
+    description: "Save a fact about the user to their profile for future reference",
+    parameters: {
+      type: "object",
+      properties: {
+        key: { type: "string", description: "Short label for the memory (e.g., 'doctor_name', 'favorite_food', 'health_note')" },
+        value: { type: "string", description: "The value to remember" },
+      },
+      required: ["key", "value"],
+    },
+  },
+  {
+    type: "function" as const,
+    name: "get_user_profile",
+    description: "Load the caller's saved memories and upcoming reminders to personalize the conversation. Call this at the start of each conversation.",
+    parameters: {
+      type: "object",
+      properties: {},
     },
   },
   {
@@ -96,6 +124,69 @@ async function searchWeb(query: string): Promise<string> {
   }
 }
 
+async function createReminder(userId: string, args: { title: string; startTime: string; endTime: string; description?: string }): Promise<string> {
+  try {
+    const res = await fetch(`${REMINDERS_API_URL}/reminders`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId,
+        title: args.title,
+        startTime: args.startTime,
+        endTime: args.endTime,
+        description: args.description,
+      }),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      console.error(`Reminders API error: ${res.status} ${text}`);
+      return JSON.stringify({ success: false, error: "Не успях да създам напомнянето." });
+    }
+    const data = await res.json();
+    return JSON.stringify({ success: true, reminder: data });
+  } catch (err) {
+    console.error("Create reminder failed:", err);
+    return JSON.stringify({ success: false, error: "Не успях да създам напомнянето." });
+  }
+}
+
+async function saveMemory(userId: string, key: string, value: string): Promise<string> {
+  try {
+    const res = await fetch(`${MEMORY_API_URL}/memories`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, key, value }),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      console.error(`Memory API error: ${res.status} ${text}`);
+      return JSON.stringify({ success: false, error: "Не успях да запазя информацията." });
+    }
+    const data = await res.json();
+    return JSON.stringify({ success: true, memory: data });
+  } catch (err) {
+    console.error("Save memory failed:", err);
+    return JSON.stringify({ success: false, error: "Не успях да запазя информацията." });
+  }
+}
+
+async function getUserProfile(userId: string): Promise<string> {
+  try {
+    const [memoriesRes, remindersRes] = await Promise.all([
+      fetch(`${MEMORY_API_URL}/memories?userId=${encodeURIComponent(userId)}`).catch(() => null),
+      fetch(`${REMINDERS_API_URL}/reminders?userId=${encodeURIComponent(userId)}`).catch(() => null),
+    ]);
+
+    const memories = memoriesRes?.ok ? await memoriesRes.json() : [];
+    const reminders = remindersRes?.ok ? await remindersRes.json() : [];
+
+    return JSON.stringify({ userId, memories, reminders });
+  } catch (err) {
+    console.error("Get user profile failed:", err);
+    return JSON.stringify({ userId, memories: [], reminders: [] });
+  }
+}
+
 const app = new Hono();
 const { injectWebSocket, upgradeWebSocket } = createNodeWebSocket({ app });
 
@@ -109,7 +200,7 @@ app.post("/incoming-call", async (c) => {
   const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Connect>
-    <Stream url="wss://${host}/media-stream"/>
+    <Stream url="wss://${host}/media-stream?from=${encodeURIComponent(String(from))}"/>
   </Connect>
 </Response>`;
   return c.text(twiml, 200, { "Content-Type": "text/xml" });
@@ -118,7 +209,10 @@ app.post("/incoming-call", async (c) => {
 // WebSocket endpoint for Twilio media stream
 app.get(
   "/media-stream",
-  upgradeWebSocket(() => {
+  upgradeWebSocket((c) => {
+    const callerPhone = c.req.query("from") ?? "unknown";
+    console.log(`WebSocket upgrade for caller: ${callerPhone}`);
+
     let openaiWs: WebSocket | null = null;
     let streamSid: string | null = null;
     let lastAssistantItemId: string | null = null;
@@ -239,16 +333,16 @@ app.get(
             };
 
             if (data.name === "web_search") {
-              searchWeb(args.query).then((result) => {
-                handleToolResult(result);
-              });
+              searchWeb(args.query).then(handleToolResult);
+            } else if (data.name === "create_reminder") {
+              createReminder(callerPhone, args).then(handleToolResult);
+            } else if (data.name === "save_memory") {
+              saveMemory(callerPhone, args.key, args.value).then(handleToolResult);
+            } else if (data.name === "get_user_profile") {
+              getUserProfile(callerPhone).then(handleToolResult);
             } else {
-              // create_reminder and other tools
               handleToolResult(
-                JSON.stringify({
-                  success: true,
-                  message: "Напомнянето е създадено.",
-                })
+                JSON.stringify({ success: false, error: "Unknown tool" })
               );
             }
             break;

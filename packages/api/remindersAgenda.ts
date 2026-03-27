@@ -39,13 +39,21 @@ async function createAgenda(): Promise<Agenda> {
   agenda.define(REMINDER_JOB_CRON, async (job) => {
     const data = job.attrs.data as { reminderId?: string };
     const reminderId = data.reminderId ?? "";
-    console.log(`[Agenda] Cron reminder: ${reminderId}`, job.attrs.name);
+    console.log(`[Agenda] Cron reminder fired: ${reminderId}`, job.attrs.name);
+    // TODO: Implement actual delivery — initiate a return call to the user via Twilio.
+    // 1. Look up the reminder by reminderId to get userId (phone) and title
+    // 2. Use Twilio API to place an outbound call to the user's phone
+    // 3. Connect the call to the voice gateway with a reminder context parameter
   });
 
   agenda.define(REMINDER_JOB_START, async (job) => {
     const data = job.attrs.data as { reminderId?: string };
     const reminderId = data.reminderId ?? "";
-    console.log(`[Agenda] Start reminder: ${reminderId}`, job.attrs.name);
+    console.log(`[Agenda] Start reminder fired: ${reminderId}`, job.attrs.name);
+    // TODO: Implement actual delivery — initiate a return call to the user via Twilio.
+    // 1. Look up the reminder by reminderId to get userId (phone) and title
+    // 2. Use Twilio API to place an outbound call to the user's phone
+    // 3. Connect the call to the voice gateway with a reminder context parameter
   });
 
   agenda.on("error", (err: Error) => {
