@@ -104,10 +104,11 @@ export default async function UsersPage() {
   const perMinuteUsers = stats?.planDistribution.perMinute
     ?? (users.length - subscriptionUsers)
 
-  const userGrowth = (stats?.usersByMonth ?? []).map((entry) => ({
-    month: entry.month,
-    users: entry.count,
-  }))
+  let cumulative = 0
+  const userGrowth = (stats?.usersByMonth ?? []).map((entry) => {
+    cumulative += entry.count
+    return { month: entry.month, newUsers: entry.count, totalUsers: cumulative }
+  })
 
   const totalCallMinutes = stats?.totalCallMinutes ?? 0
   const totalCalls = stats?.totalCalls ?? 0
