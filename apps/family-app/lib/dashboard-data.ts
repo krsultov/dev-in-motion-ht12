@@ -30,6 +30,10 @@ function formatTimeLabel(value: Date) {
   }).format(value);
 }
 
+function isValidDate(value: Date) {
+  return !Number.isNaN(value.getTime());
+}
+
 function formatRelativeLabel(value: string) {
   const time = new Date(value).getTime();
   if (Number.isNaN(time)) {
@@ -80,7 +84,7 @@ export function buildCalendarActivities(reminders: ReminderRecord[]): CalendarAc
   return reminders
     .map((reminder) => {
       const endTime = new Date(reminder.endTime);
-      const isValid = !Number.isNaN(endTime.getTime());
+      const isValid = isValidDate(endTime);
       const now = Date.now();
 
       return {
@@ -99,12 +103,19 @@ export function buildRecentActivity(reminders: ReminderRecord[]): HomeSummaryAct
   return [...reminders]
     .sort((left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime())
     .slice(0, 2)
-    .map((reminder) => ({
-      description: reminder.description?.trim() || `Scheduled for ${new Intl.DateTimeFormat('en-US', {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-      }).format(new Date(reminder.endTime))}`,
-      id: reminder._id,
-      title: reminder.title,
-    }));
+    .map((reminder) => {
+      const endTime = new Date(reminder.endTime);
+      const fallbackDescription = isValidDate(endTime)
+        ? `Scheduled for ${new Intl.DateTimeFormat('en-US', {
+            dateStyle: 'medium',
+            timeStyle: 'short',
+          }).format(endTime)}`
+        : 'Scheduled time unavailable';
+
+      return {
+        description: reminder.description?.trim() || fallbackDescription,
+        id: reminder._id,
+        title: reminder.title,
+      };
+    });
 }

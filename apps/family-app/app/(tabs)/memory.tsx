@@ -1,50 +1,88 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Button, Card, Text } from 'react-native-paper';
 
 import { MemorySectionCard } from '@/components/memory-section-card';
 import { ScreenShell } from '@/components/screen-shell';
 import { useAuth } from '@/context/auth-context';
-import { getCurrentUserMemory, memoryApiBaseUrl } from '@/lib/memory-api';
+import {
+  getCurrentUserMemory,
+  getLatestUserMemoryRecord,
+  memoryApiBaseUrl,
+} from '@/lib/memory-api';
 import type { UserMemoryRecord } from '@/types/memory';
 
 export default function MemoryScreen() {
   const { user } = useAuth();
+  const userPhone = user?.phone ?? null;
   const [memoryRecord, setMemoryRecord] = useState<UserMemoryRecord | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [resolvedPhone, setResolvedPhone] = useState<string | null>(userPhone);
 
-  const loadMemory = async (mode: 'initial' | 'refresh' = 'initial') => {
-    if (!user?.phone) {
-      setMemoryRecord(null);
-      setErrorMessage('Sign in with a phone number to load memory data.');
-      setIsLoading(false);
-      return;
-    }
+  const loadMemory = useCallback(
+    async (mode: 'initial' | 'refresh' = 'initial', options?: { signal?: { aborted: boolean } }) => {
+      if (mode !== 'refresh') {
+        setIsLoading(true);
+      }
 
-    if (mode !== 'refresh') {
-      setIsLoading(true);
-    }
+      try {
+        console.log('[memory-screen] loadMemory:start', { mode, user });
+        const fallbackRecord = !userPhone ? await getLatestUserMemoryRecord() : null;
+        const activePhone = userPhone?.trim() || fallbackRecord?.phone?.trim() || '';
+        const record = activePhone ? await getCurrentUserMemory(activePhone) : fallbackRecord;
 
-    try {
-      const record = await getCurrentUserMemory(user.phone);
-      setMemoryRecord(record);
-      setErrorMessage(null);
-    } catch (error) {
-      setMemoryRecord(null);
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : 'Unable to load memory data right now.',
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  };
+        if (options?.signal?.aborted) {
+          return;
+        }
+
+        console.log('[memory-screen] loadMemory:resolved', {
+          activePhone,
+          fallbackRecord,
+          record,
+        });
+
+        setResolvedPhone(activePhone || null);
+        setMemoryRecord(record);
+        setErrorMessage(null);
+      } catch (error) {
+        if (options?.signal?.aborted) {
+          return;
+        }
+
+        setMemoryRecord(null);
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : 'Unable to load memory data right now.',
+        );
+        console.log('[memory-screen] loadMemory:failed', { error });
+      } finally {
+        if (!options?.signal?.aborted) {
+          setIsLoading(false);
+        }
+      }
+    },
+    [user, userPhone],
+  );
 
   useEffect(() => {
-    void loadMemory();
-  }, [user?.phone]);
+    const request = { aborted: false };
+    void loadMemory('initial', { signal: request });
+
+    return () => {
+      request.aborted = true;
+    };
+  }, [loadMemory]);
+
+  useEffect(() => {
+    console.log('[memory-screen] render state', {
+      errorMessage,
+      isLoading,
+      memoryRecord,
+      resolvedPhone,
+    });
+  }, [errorMessage, isLoading, memoryRecord, resolvedPhone]);
 
   const screenTitle = memoryRecord?.name
     ? `${memoryRecord.name}'s profile`
@@ -64,7 +102,7 @@ export default function MemoryScreen() {
           Linked phone
         </Text>
         <Text variant="bodyMedium" style={styles.statusValue}>
-          {user?.phone ?? 'Not available'}
+          {resolvedPhone ?? user?.phone ?? 'Not available'}
         </Text>
       </View>
 
@@ -113,6 +151,18 @@ export default function MemoryScreen() {
       ) : null}
 
       <MemorySectionCard
+        title="Memory notes"
+        iconName="book"
+        accentColor="#8B8DF1"
+        rows={(memoryRecord?.memories ?? []).map((item, index) => ({
+          id: `${memoryRecord?._id ?? 'memory'}-note-${index + 1}`,
+          label: `Memory ${index + 1}`,
+          detail: item,
+        }))}
+        emptyMessage="No memory notes stored yet."
+      />
+
+      <MemorySectionCard
         title="Medications"
         iconName="medical"
         accentColor="#534AB7"
@@ -120,7 +170,7 @@ export default function MemoryScreen() {
           id: item.id,
           label: item.name,
           detail: item.schedule,
-          iconColor: item.id === '1' ? '#D4F4E4' : '#CDCFFC',
+          iconColor: item.id.endsWith('1') ? '#D4F4E4' : '#CDCFFC',
         }))}
         emptyMessage="No medications stored yet."
       />

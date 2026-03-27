@@ -11,34 +11,47 @@ import {
   buildElderProfile,
   buildRecentActivity,
 } from '@/lib/dashboard-data';
-import { getCurrentUserMemory } from '@/lib/memory-api';
+import { getCurrentUserMemory, getLatestUserMemoryRecord } from '@/lib/memory-api';
 import { listReminders } from '@/lib/reminders-api';
 import type { UserMemoryRecord } from '@/types/memory';
 import type { ReminderRecord } from '@/types/reminder';
 
 export default function HomeScreen() {
   const { user } = useAuth();
+  const userName = user?.name ?? null;
+  const userPhone = user?.phone ?? null;
   const [memoryRecord, setMemoryRecord] = useState<UserMemoryRecord | null>(null);
   const [reminders, setReminders] = useState<ReminderRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [resolvedPhone, setResolvedPhone] = useState<string | null>(userPhone);
+  const [resolvedUserName, setResolvedUserName] = useState<string | null>(userName);
 
   useEffect(() => {
     let isMounted = true;
 
     const loadDashboard = async () => {
-      if (!user?.phone) {
-        setMemoryRecord(null);
-        setReminders([]);
-        setIsLoading(false);
-        return;
-      }
-
       setIsLoading(true);
+      setErrorMessage(null);
 
       try {
-        const [memory, reminderList] = await Promise.all([
-          getCurrentUserMemory(user.phone),
+        console.log('[home-screen] loadDashboard:start', { user });
+        const fallbackRecord = !userPhone ? await getLatestUserMemoryRecord() : null;
+        const activePhone = userPhone?.trim() || fallbackRecord?.phone?.trim() || '';
+        const activeName = userName?.trim() || fallbackRecord?.name?.trim() || 'Family';
+
+        console.log('[home-screen] active identity resolved', {
+          activeName,
+          activePhone,
+          fallbackRecord,
+          user,
+        });
+
+        setResolvedPhone(activePhone || null);
+        setResolvedUserName(activeName || null);
+
+        const [memoryResult, remindersResult] = await Promise.allSettled([
+          activePhone ? getCurrentUserMemory(activePhone) : Promise.resolve(fallbackRecord),
           listReminders(),
         ]);
 
@@ -46,15 +59,44 @@ export default function HomeScreen() {
           return;
         }
 
-        setMemoryRecord(memory);
-        setReminders(reminderList);
-        setErrorMessage(null);
+        const nextErrors: string[] = [];
+
+        if (memoryResult.status === 'fulfilled') {
+          setMemoryRecord(memoryResult.value);
+          console.log('[home-screen] memory fetch resolved', { memoryRecord: memoryResult.value });
+        } else {
+          setMemoryRecord(null);
+          nextErrors.push(
+            memoryResult.reason instanceof Error
+              ? `Memory: ${memoryResult.reason.message}`
+              : 'Memory data could not be loaded.',
+          );
+          console.log('[home-screen] memory fetch failed', { reason: memoryResult.reason });
+        }
+
+        if (remindersResult.status === 'fulfilled') {
+          setReminders(remindersResult.value);
+          console.log('[home-screen] reminders fetch resolved', { reminders: remindersResult.value });
+        } else {
+          setReminders([]);
+          nextErrors.push(
+            remindersResult.reason instanceof Error
+              ? `Reminders: ${remindersResult.reason.message}`
+              : 'Reminder data could not be loaded.',
+          );
+          console.log('[home-screen] reminders fetch failed', { reason: remindersResult.reason });
+        }
+
+        setErrorMessage(nextErrors.length > 0 ? nextErrors.join(' ') : null);
       } catch (error) {
         if (!isMounted) {
           return;
         }
 
+        setMemoryRecord(null);
+        setReminders([]);
         setErrorMessage(error instanceof Error ? error.message : 'Unable to load dashboard data.');
+        console.log('[home-screen] loadDashboard:failed', { error });
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -67,11 +109,22 @@ export default function HomeScreen() {
     return () => {
       isMounted = false;
     };
-  }, [user?.phone]);
+  }, [user, userName, userPhone]);
+
+  useEffect(() => {
+    console.log('[home-screen] render state', {
+      errorMessage,
+      isLoading,
+      memoryRecord,
+      remindersCount: reminders.length,
+      resolvedPhone,
+      resolvedUserName,
+    });
+  }, [errorMessage, isLoading, memoryRecord, reminders, resolvedPhone, resolvedUserName]);
 
   const elderProfile = useMemo(
-    () => buildElderProfile(memoryRecord, user?.phone ?? null),
-    [memoryRecord, user?.phone],
+    () => buildElderProfile(memoryRecord, resolvedPhone),
+    [memoryRecord, resolvedPhone],
   );
   const calendarMonthActivities = useMemo(() => buildCalendarActivities(reminders), [reminders]);
   const recentItems = useMemo(() => buildRecentActivity(reminders), [reminders]);
@@ -81,7 +134,7 @@ export default function HomeScreen() {
   return (
     <ScreenShell>
       <Text variant="headlineSmall" style={styles.title}>
-        Good morning, {user?.name ?? 'Family'}
+        Good morning, {resolvedUserName ?? 'Family'}
       </Text>
       <Text variant="bodyMedium" style={styles.subtitle}>
         Your mother&apos;s assistant is active and keeping things on track.

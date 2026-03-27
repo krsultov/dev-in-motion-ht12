@@ -1,28 +1,50 @@
-import { useEffect, useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
-import { router } from 'expo-router';
-import { Avatar, Button, Card, Chip, Divider, Surface, Switch, Text } from 'react-native-paper';
+import { useEffect, useMemo, useState } from "react";
+import { StyleSheet, View } from "react-native";
+import { router } from "expo-router";
+import {
+  Avatar,
+  Button,
+  Card,
+  Chip,
+  Divider,
+  Surface,
+  Switch,
+  Text,
+} from "react-native-paper";
 
-import { ScreenShell } from '@/components/screen-shell';
-import { useAuth } from '@/context/auth-context';
-import { buildElderProfile } from '@/lib/dashboard-data';
-import { getCurrentUserMemory } from '@/lib/memory-api';
-import type { UserMemoryRecord } from '@/types/memory';
+import { ScreenShell } from "@/components/screen-shell";
+import { useAuth } from "@/context/auth-context";
+import { buildElderProfile } from "@/lib/dashboard-data";
+import {
+  getCurrentUserMemory,
+  getLatestUserMemoryRecord,
+} from "@/lib/memory-api";
+import type { UserMemoryRecord } from "@/types/memory";
 
 const familyAccountProfile = {
-  name: 'Family member',
+  name: "Family member",
   notificationPreferences: [
-    { id: 'purchases', label: 'Purchases', enabled: true },
-    { id: 'wellness-alerts', label: 'Wellness Alerts', enabled: true },
-    { id: 'unusual-activity', label: 'Unusual Activity', enabled: false },
+    { id: "purchases", label: "Purchases", enabled: true },
+    { id: "wellness-alerts", label: "Wellness Alerts", enabled: true },
+    { id: "unusual-activity", label: "Unusual Activity", enabled: false },
   ],
-  permissionLevel: 'Local Frontend Access',
-  relationshipLabel: 'Family member',
+  permissionLevel: "Local Frontend Access",
+  relationshipLabel: "Family member",
 };
 
 export default function ProfileScreen() {
   const { signOut, user } = useAuth();
-  const [memoryRecord, setMemoryRecord] = useState<UserMemoryRecord | null>(null);
+  const userName = user?.name ?? null;
+  const userPhone = user?.phone ?? null;
+  const [memoryRecord, setMemoryRecord] = useState<UserMemoryRecord | null>(
+    null,
+  );
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [resolvedPhone, setResolvedPhone] = useState<string | null>(userPhone);
+  const [resolvedUserName, setResolvedUserName] = useState<string | null>(
+    userName,
+  );
   const [notificationPreferences, setNotificationPreferences] = useState(
     familyAccountProfile.notificationPreferences,
   );
@@ -31,19 +53,46 @@ export default function ProfileScreen() {
     let isMounted = true;
 
     const loadMemory = async () => {
-      if (!user?.phone) {
-        setMemoryRecord(null);
-        return;
-      }
+      setIsLoading(true);
+      setErrorMessage(null);
 
       try {
-        const record = await getCurrentUserMemory(user.phone);
+        console.log("[profile-screen] loadMemory:start", { user });
+        const fallbackRecord = !userPhone
+          ? await getLatestUserMemoryRecord()
+          : null;
+        const activePhone =
+          userPhone?.trim() || fallbackRecord?.phone?.trim() || "";
+        const record = activePhone
+          ? await getCurrentUserMemory(activePhone)
+          : fallbackRecord;
+
         if (isMounted) {
+          console.log("[profile-screen] loadMemory:resolved", {
+            activePhone,
+            fallbackRecord,
+            record,
+          });
+          setResolvedPhone(activePhone || null);
+          setResolvedUserName(
+            (userName?.trim() || record?.name) ?? "Family member",
+          );
           setMemoryRecord(record);
+          setErrorMessage(null);
         }
-      } catch {
+      } catch (error) {
         if (isMounted) {
           setMemoryRecord(null);
+          setErrorMessage(
+            error instanceof Error
+              ? error.message
+              : "Unable to load the live profile right now.",
+          );
+          console.log("[profile-screen] loadMemory:failed", { error });
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
         }
       }
     };
@@ -53,22 +102,35 @@ export default function ProfileScreen() {
     return () => {
       isMounted = false;
     };
-  }, [user?.phone]);
+  }, [user, userName, userPhone]);
+
+  useEffect(() => {
+    console.log("[profile-screen] render state", {
+      errorMessage,
+      isLoading,
+      memoryRecord,
+      resolvedPhone,
+      resolvedUserName,
+    });
+  }, [errorMessage, isLoading, memoryRecord, resolvedPhone, resolvedUserName]);
 
   const elderProfile = useMemo(
-    () => buildElderProfile(memoryRecord, user?.phone ?? null),
-    [memoryRecord, user?.phone],
+    () => buildElderProfile(memoryRecord, resolvedPhone),
+    [memoryRecord, resolvedPhone],
   );
 
   const handleToggle = (id: string) => {
     setNotificationPreferences((current) =>
-      current.map((item) => (item.id === id ? { ...item, enabled: !item.enabled } : item)),
+      current.map((item) =>
+        item.id === id ? { ...item, enabled: !item.enabled } : item,
+      ),
     );
   };
 
   const handleSignOut = () => {
+    console.log("[profile-screen] sign out tapped while auth is disabled");
     signOut();
-    router.replace('/auth');
+    router.replace("/(tabs)/home");
   };
 
   return (
@@ -104,21 +166,85 @@ export default function ProfileScreen() {
           </View>
 
           <Text variant="bodyMedium" style={styles.bio}>
-            This section is now driven by the live user memory record. Extra profile fields like age,
-            city, and bio do not exist in the backend yet.
+            This section is now driven by the live user memory record. Extra
+            profile fields like age, city, and bio do not exist in the backend
+            yet.
           </Text>
 
+          {isLoading ? (
+            <Surface style={styles.statePanel} elevation={0}>
+              <Text variant="bodyMedium" style={styles.stateText}>
+                Loading live profile data.
+              </Text>
+            </Surface>
+          ) : null}
+
+          {!isLoading && errorMessage ? (
+            <Surface style={styles.statePanel} elevation={0}>
+              <Text variant="bodyMedium" style={styles.stateText}>
+                {errorMessage}
+              </Text>
+            </Surface>
+          ) : null}
+
+          {!isLoading && !errorMessage && !memoryRecord ? (
+            <Surface style={styles.statePanel} elevation={0}>
+              <Text variant="bodyMedium" style={styles.stateText}>
+                No live profile record exists for this phone number yet.
+              </Text>
+            </Surface>
+          ) : null}
+
           <View style={styles.chipRow}>
-            <Chip compact style={[styles.infoChip, styles.languageChip]} textStyle={styles.darkChipText}>
-              {memoryRecord?.preferences.length ? 'Has preferences' : 'No preferences yet'}
+            <Chip
+              compact
+              style={[styles.infoChip, styles.languageChip]}
+              textStyle={styles.darkChipText}
+            >
+              {memoryRecord && memoryRecord.preferences.length > 0
+                ? `${memoryRecord.preferences.length} preferences`
+                : "No preferences yet"}
             </Chip>
-            <Chip compact style={[styles.infoChip, styles.livingChip]} textStyle={styles.lightChipText}>
-              {memoryRecord?.medications.length ? 'Has medications' : 'No medications yet'}
+            <Chip
+              compact
+              style={[styles.infoChip, styles.livingChip]}
+              textStyle={styles.lightChipText}
+            >
+              {memoryRecord && memoryRecord.medications.length > 0
+                ? `${memoryRecord.medications.length} medications`
+                : "No medications yet"}
             </Chip>
-            <Chip compact style={[styles.infoChip, styles.relationshipChip]} textStyle={styles.darkChipText}>
-              {memoryRecord?.contacts.length ? 'Has contacts' : 'No contacts yet'}
+            <Chip
+              compact
+              style={[styles.infoChip, styles.relationshipChip]}
+              textStyle={styles.darkChipText}
+            >
+              {memoryRecord && memoryRecord.contacts.length > 0
+                ? `${memoryRecord.contacts.length} contacts`
+                : "No contacts yet"}
             </Chip>
           </View>
+
+          {memoryRecord ? (
+            <View style={styles.statsRow}>
+              <View style={styles.statItem}>
+                <Text variant="bodySmall" style={styles.statLabel}>
+                  Memory notes
+                </Text>
+                <Text variant="titleMedium" style={styles.statValue}>
+                  {memoryRecord.memories.length}
+                </Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text variant="bodySmall" style={styles.statLabel}>
+                  Last update
+                </Text>
+                <Text variant="titleMedium" style={styles.statValue}>
+                  {elderProfile.lastUpdatedLabel}
+                </Text>
+              </View>
+            </View>
+          ) : null}
         </Card.Content>
       </Card>
 
@@ -137,10 +263,10 @@ export default function ProfileScreen() {
             />
             <View style={styles.profileCopy}>
               <Text variant="titleLarge" style={styles.profileName}>
-                {user?.name ?? familyAccountProfile.name}
+                {resolvedUserName ?? familyAccountProfile.name}
               </Text>
               <Text variant="bodyMedium" style={styles.profileMeta}>
-                Frontend-only sign-in
+                Authentication disabled for testing
               </Text>
             </View>
           </View>
@@ -173,7 +299,11 @@ export default function ProfileScreen() {
             <Text variant="bodySmall" style={styles.footerLabel}>
               Permission level
             </Text>
-            <Chip compact style={styles.permissionBadge} textStyle={styles.permissionText}>
+            <Chip
+              compact
+              style={styles.permissionBadge}
+              textStyle={styles.permissionText}
+            >
               {familyAccountProfile.permissionLevel}
             </Chip>
           </View>
@@ -183,7 +313,8 @@ export default function ProfileScreen() {
             buttonColor="#232325"
             textColor="#FFFFFF"
             style={styles.signOutButton}
-            onPress={handleSignOut}>
+            onPress={handleSignOut}
+          >
             Sign Out
           </Button>
         </Card.Content>
@@ -197,31 +328,31 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   title: {
-    color: '#FFFFFF',
-    fontWeight: '700',
+    color: "#FFFFFF",
+    fontWeight: "700",
     letterSpacing: -0.3,
   },
   subtitle: {
-    color: '#A1A1AA',
+    color: "#A1A1AA",
     lineHeight: 21,
     marginBottom: 8,
     marginTop: 6,
   },
   card: {
-    backgroundColor: '#1E1E1E',
-    borderColor: '#303038',
+    backgroundColor: "#1E1E1E",
+    borderColor: "#303038",
     borderRadius: 22,
   },
   cardContent: {
     gap: 18,
   },
   sectionTitle: {
-    color: '#FFFFFF',
-    fontWeight: '700',
+    color: "#FFFFFF",
+    fontWeight: "700",
   },
   profileHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
+    alignItems: "center",
+    flexDirection: "row",
     gap: 16,
   },
   profileCopy: {
@@ -229,103 +360,136 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   primaryAvatar: {
-    backgroundColor: '#CDCFFC',
+    backgroundColor: "#CDCFFC",
   },
   secondaryAvatar: {
-    backgroundColor: '#D4F4E4',
+    backgroundColor: "#D4F4E4",
   },
   avatarLabel: {
-    color: '#23244D',
-    fontWeight: '700',
+    color: "#23244D",
+    fontWeight: "700",
   },
   secondaryAvatarLabel: {
-    color: '#173D2C',
-    fontWeight: '700',
+    color: "#173D2C",
+    fontWeight: "700",
   },
   profileName: {
-    color: '#FFFFFF',
-    fontWeight: '700',
+    color: "#FFFFFF",
+    fontWeight: "700",
     letterSpacing: -0.2,
   },
   profileMeta: {
-    color: '#A1A1AA',
+    color: "#A1A1AA",
   },
   bio: {
-    color: '#CFCFD6',
+    color: "#CFCFD6",
     lineHeight: 22,
   },
+  statePanel: {
+    backgroundColor: "#171717",
+    borderColor: "#26262C",
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: 14,
+  },
+  stateText: {
+    color: "#A1A1AA",
+    lineHeight: 20,
+  },
   chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 10,
+  },
+  statsRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  statItem: {
+    backgroundColor: "#171717",
+    borderColor: "#26262C",
+    borderRadius: 18,
+    borderWidth: 1,
+    flex: 1,
+    gap: 6,
+    padding: 14,
+  },
+  statLabel: {
+    color: "#8A8A96",
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
+  },
+  statValue: {
+    color: "#FFFFFF",
+    fontWeight: "700",
   },
   infoChip: {
     borderRadius: 999,
   },
   languageChip: {
-    backgroundColor: '#CDCFFC',
+    backgroundColor: "#CDCFFC",
   },
   livingChip: {
-    backgroundColor: '#2D2D2D',
+    backgroundColor: "#2D2D2D",
   },
   relationshipChip: {
-    backgroundColor: '#F9E4D4',
+    backgroundColor: "#F9E4D4",
   },
   darkChipText: {
-    color: '#23244D',
+    color: "#23244D",
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 0.2,
   },
   lightChipText: {
-    color: '#F4F4F5',
+    color: "#F4F4F5",
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 0.2,
   },
   preferencesPanel: {
-    backgroundColor: '#171717',
-    borderColor: '#26262C',
+    backgroundColor: "#171717",
+    borderColor: "#26262C",
     borderRadius: 18,
     borderWidth: 1,
     padding: 16,
   },
   preferencesTitle: {
-    color: '#FFFFFF',
-    fontWeight: '700',
+    color: "#FFFFFF",
+    fontWeight: "700",
     marginBottom: 10,
   },
   preferenceRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
     minHeight: 52,
   },
   preferenceLabel: {
-    color: '#E4E4E7',
+    color: "#E4E4E7",
     flex: 1,
     marginRight: 16,
   },
   preferenceDivider: {
-    backgroundColor: '#2D2D2D',
+    backgroundColor: "#2D2D2D",
   },
   footerBlock: {
     gap: 8,
   },
   footerLabel: {
-    color: '#8A8A96',
+    color: "#8A8A96",
     letterSpacing: 0.3,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
   },
   permissionBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#CDCFFC',
+    alignSelf: "flex-start",
+    backgroundColor: "#CDCFFC",
     borderRadius: 999,
   },
   permissionText: {
-    color: '#23244D',
+    color: "#23244D",
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 0.2,
   },
   signOutButton: {

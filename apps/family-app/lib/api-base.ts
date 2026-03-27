@@ -1,5 +1,19 @@
 import Constants from 'expo-constants';
-import { Platform } from 'react-native';
+import { NativeModules, Platform } from 'react-native';
+
+function extractHost(candidate: string | null | undefined) {
+  if (!candidate) {
+    return null;
+  }
+
+  const withoutProtocol = candidate.replace(/^[a-z]+:\/\//i, '');
+  const host = withoutProtocol.split('/')[0]?.split(':')[0]?.trim();
+  return host || null;
+}
+
+function isLocalhost(host: string | null) {
+  return host === 'localhost' || host === '127.0.0.1';
+}
 
 function getHostFromExpo() {
   const hostCandidates = [
@@ -7,17 +21,30 @@ function getHostFromExpo() {
     Constants.expoGoConfig?.debuggerHost,
     Constants.manifest2?.extra?.expoGo?.debuggerHost,
     Constants.linkingUri,
-  ].filter((value): value is string => typeof value === 'string' && value.length > 0);
+  ];
 
   for (const candidate of hostCandidates) {
-    const withoutProtocol = candidate.replace(/^[a-z]+:\/\//i, '');
-    const host = withoutProtocol.split('/')[0]?.split(':')[0];
+    const host = extractHost(candidate);
     if (host) {
       return host;
     }
   }
 
-  return 'localhost';
+  return null;
+}
+
+function getHostFromNativeBundle() {
+  const sourceCodeHost = extractHost(NativeModules.SourceCode?.scriptURL);
+  if (sourceCodeHost) {
+    return sourceCodeHost;
+  }
+
+  const serverHost = extractHost(NativeModules.PlatformConstants?.ServerHost);
+  if (serverHost) {
+    return serverHost;
+  }
+
+  return null;
 }
 
 function getHostFromConfiguredApiUrl() {
@@ -33,31 +60,139 @@ function getHostFromConfiguredApiUrl() {
   }
 }
 
-function shouldUseConfiguredHost(host: string) {
-  if (host !== 'localhost' && host !== '127.0.0.1') {
-    return true;
+function buildHelpfulErrorMessage(message: string, url: string) {
+  const normalizedMessage = message.trim();
+
+  if (/Access-Control-Allow-Origin|CORS|preflight/i.test(normalizedMessage)) {
+    return `Web requests to ${url} are being blocked by CORS. The frontend reached the API origin, but the backend does not allow browser cross-origin requests yet.`;
   }
 
-  return Platform.OS === 'web' || Platform.OS === 'ios';
+  if (/ETIMEDOUT/i.test(normalizedMessage) && /27017/.test(normalizedMessage)) {
+    return `The frontend reached the API at ${url}, but that API could not reach MongoDB. The backend is timing out while connecting to port 27017.`;
+  }
+
+  if (/Network request failed/i.test(normalizedMessage)) {
+    return `The app could not reach ${url}. Check that the backend service is running and reachable from this device/browser.`;
+  }
+
+  return normalizedMessage;
+}
+
+function resolveHost() {
+  const configuredHost = getHostFromConfiguredApiUrl();
+  const nativeBundleHost = getHostFromNativeBundle();
+  const expoHost = getHostFromExpo();
+
+  if (configuredHost && !isLocalhost(configuredHost)) {
+    return {
+      host: configuredHost,
+      source: 'configured-api-url',
+    };
+  }
+
+  if (nativeBundleHost && !isLocalhost(nativeBundleHost)) {
+    return {
+      host: nativeBundleHost,
+      source: 'react-native-bundle',
+    };
+  }
+
+  if (expoHost && !isLocalhost(expoHost)) {
+    return {
+      host: expoHost,
+      source: 'expo-runtime',
+    };
+  }
+
+  if (Platform.OS === 'android') {
+    return {
+      host: '10.0.2.2',
+      source: 'android-emulator-loopback',
+    };
+  }
+
+  if (configuredHost) {
+    return {
+      host: configuredHost,
+      source: 'configured-localhost-fallback',
+    };
+  }
+
+  if (nativeBundleHost) {
+    return {
+      host: nativeBundleHost,
+      source: 'react-native-bundle-localhost-fallback',
+    };
+  }
+
+  if (expoHost) {
+    return {
+      host: expoHost,
+      source: 'expo-runtime-localhost-fallback',
+    };
+  }
+
+  return {
+    host: 'localhost',
+    source: 'hardcoded-localhost-fallback',
+  };
 }
 
 export function getServiceBaseUrl(port: number) {
-  const configuredHost = getHostFromConfiguredApiUrl();
-  const host =
-    configuredHost && shouldUseConfiguredHost(configuredHost)
-      ? configuredHost
-      : getHostFromExpo();
+  const { host, source } = resolveHost();
+  const baseUrl = `http://${host}:${port}`;
 
-  return `http://${host}:${port}`;
+  console.log('[api] base-url:resolved', {
+    configuredApiUrl: process.env.EXPO_PUBLIC_API_URL ?? null,
+    host,
+    port,
+    source,
+    baseUrl,
+    platform: Platform.OS,
+  });
+
+  return baseUrl;
 }
 
 export async function requestJson<T>(baseUrl: string, path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${baseUrl}${path}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init?.headers ?? {}),
-    },
-    ...init,
+  const url = `${baseUrl}${path}`;
+  const method = init?.method ?? 'GET';
+
+  console.log('[api] request:start', {
+    body: init?.body,
+    method,
+    url,
+  });
+
+  let response: Response;
+
+  try {
+    response = await fetch(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...(init?.headers ?? {}),
+      },
+      ...init,
+    });
+  } catch (error) {
+    const originalMessage = error instanceof Error ? error.message : 'Network request failed';
+    const helpfulMessage = buildHelpfulErrorMessage(originalMessage, url);
+
+    console.log('[api] request:threw', {
+      helpfulMessage,
+      method,
+      originalMessage,
+      url,
+    });
+
+    throw new Error(helpfulMessage);
+  }
+
+  console.log('[api] request:response', {
+    method,
+    ok: response.ok,
+    status: response.status,
+    url,
   });
 
   if (!response.ok) {
@@ -65,6 +200,7 @@ export async function requestJson<T>(baseUrl: string, path: string, init?: Reque
 
     try {
       const payload = (await response.json()) as { error?: string };
+      console.log('[api] request:error-payload', { method, payload, url });
       if (payload.error) {
         message = payload.error;
       }
@@ -72,8 +208,10 @@ export async function requestJson<T>(baseUrl: string, path: string, init?: Reque
       // Ignore non-JSON error payloads and keep the generic message.
     }
 
-    throw new Error(message);
+    throw new Error(buildHelpfulErrorMessage(message, url));
   }
 
-  return (await response.json()) as T;
+  const payload = (await response.json()) as T;
+  console.log('[api] request:success-payload', { method, payload, url });
+  return payload;
 }

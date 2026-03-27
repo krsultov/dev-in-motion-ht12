@@ -1,40 +1,10 @@
-import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
-import { Button, Surface, Text, TextInput } from 'react-native-paper';
-
-import { useAuth } from '@/context/auth-context';
-
-type AuthMode = 'register' | 'signin';
+import { Button, Surface, Text } from 'react-native-paper';
 
 export default function AuthScreen() {
-  const [mode, setMode] = useState<AuthMode>('register');
-  const [name, setName] = useState<string>('');
-  const [phone, setPhone] = useState<string>('');
-  const [password, setPassword] = useState<string>('');
-  const { signIn } = useAuth();
-
-  const isRegisterMode = mode === 'register';
-
   const handleContinue = () => {
-    const trimmedName = name.trim();
-    const trimmedPhone = phone.trim();
-    const trimmedPassword = password.trim();
-
-    if (isRegisterMode && (!trimmedName || !trimmedPhone || !trimmedPassword)) {
-      Alert.alert('Missing details', 'Enter your name, phone number, and password to continue.');
-      return;
-    }
-
-    if (!isRegisterMode && !trimmedPhone) {
-      Alert.alert('Missing details', 'Enter your phone number to continue.');
-      return;
-    }
-
-    signIn({
-      name: isRegisterMode ? trimmedName : trimmedName || 'Family member',
-      phone: trimmedPhone,
-    });
+    console.log('[auth-screen] auth disabled for testing, continuing directly to home');
     router.replace('/(tabs)/home');
   };
 
@@ -47,75 +17,18 @@ export default function AuthScreen() {
           Nelson
         </Text>
         <Text variant="bodyLarge" style={styles.subtitle}>
-          A simple family access flow for the app. Register and sign in are design-only and do not
-          enforce real backend authentication.
+          Authentication is temporarily disabled so we can test live frontend rendering without any
+          auth gate.
         </Text>
 
         <Surface style={styles.card} elevation={1}>
-          <View style={styles.modeSwitcher}>
-            <Button
-              mode={isRegisterMode ? 'contained' : 'text'}
-              buttonColor={isRegisterMode ? '#8B8DF1' : '#232325'}
-              textColor={isRegisterMode ? '#18181B' : '#FFFFFF'}
-              style={styles.modeButton}
-              onPress={() => setMode('register')}>
-              Register
-            </Button>
-            <Button
-              mode={!isRegisterMode ? 'contained' : 'text'}
-              buttonColor={!isRegisterMode ? '#8B8DF1' : '#232325'}
-              textColor={!isRegisterMode ? '#18181B' : '#FFFFFF'}
-              style={styles.modeButton}
-              onPress={() => setMode('signin')}>
-              Sign In
-            </Button>
-          </View>
-
           <Text variant="titleMedium" style={styles.cardTitle}>
-            {isRegisterMode ? 'Create family access' : 'Welcome back'}
+            Auth disabled
           </Text>
           <Text variant="bodyMedium" style={styles.cardText}>
-            {isRegisterMode
-              ? 'Create a simple local account to enter the family dashboard.'
-              : 'Sign in with your phone number to reopen the dashboard.'}
+            The app now opens the tabs directly and will try to resolve the latest live family record
+            from the backend for testing.
           </Text>
-
-          {isRegisterMode ? (
-            <TextInput
-              label="Full name"
-              mode="outlined"
-              autoCapitalize="words"
-              textColor="#FFFFFF"
-              outlineColor="#2D2D2D"
-              activeOutlineColor="#8B8DF1"
-              value={name}
-              onChangeText={setName}
-            />
-          ) : null}
-
-          <TextInput
-            label="Phone number"
-            mode="outlined"
-            keyboardType="phone-pad"
-            textColor="#FFFFFF"
-            outlineColor="#2D2D2D"
-            activeOutlineColor="#8B8DF1"
-            value={phone}
-            onChangeText={setPhone}
-          />
-
-          {isRegisterMode ? (
-            <TextInput
-              label="Password"
-              mode="outlined"
-              secureTextEntry
-              textColor="#FFFFFF"
-              outlineColor="#2D2D2D"
-              activeOutlineColor="#8B8DF1"
-              value={password}
-              onChangeText={setPassword}
-            />
-          ) : null}
 
           <Button
             mode="contained"
@@ -123,11 +36,11 @@ export default function AuthScreen() {
             textColor="#18181B"
             style={styles.submitButton}
             onPress={handleContinue}>
-            {isRegisterMode ? 'Register' : 'Sign In'}
+            Open app
           </Button>
 
           <Text variant="bodySmall" style={styles.hint}>
-            No real authentication is enforced. This only controls entry into the app UI.
+            This screen is only a temporary bypass while we debug live data rendering.
           </Text>
         </Surface>
       </View>
@@ -160,17 +73,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     gap: 16,
     padding: 20,
-  },
-  modeSwitcher: {
-    backgroundColor: '#171717',
-    borderRadius: 16,
-    flexDirection: 'row',
-    gap: 10,
-    padding: 6,
-  },
-  modeButton: {
-    borderRadius: 12,
-    flex: 1,
   },
   cardTitle: {
     color: '#FFFFFF',
