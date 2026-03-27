@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Card, IconButton, Surface, Text } from 'react-native-paper';
 
-import type { CalendarActivity, CalendarActivityType } from '@/data/dummy';
+import type { CalendarActivity, CalendarActivityType } from '@/types/ui-models';
 
 const weekdayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 const activityTypeColors: Record<CalendarActivityType, string> = {

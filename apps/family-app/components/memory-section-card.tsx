@@ -14,6 +14,7 @@ type MemorySectionCardProps = {
   iconName: keyof typeof Ionicons.glyphMap;
   accentColor: string;
   rows: MemoryRow[];
+  emptyMessage?: string;
 };
 
 export function MemorySectionCard({
@@ -21,6 +22,7 @@ export function MemorySectionCard({
   iconName,
   accentColor,
   rows,
+  emptyMessage = 'No entries yet.',
 }: MemorySectionCardProps) {
   return (
     <Surface style={styles.card} elevation={1}>
@@ -33,6 +35,12 @@ export function MemorySectionCard({
           onPress={() => Alert.alert('Editing coming soon')}
         />
       </View>
+
+      {rows.length === 0 ? (
+        <Text variant="bodyMedium" style={styles.emptyText}>
+          {emptyMessage}
+        </Text>
+      ) : null}
 
       {rows.map((row, index) => (
         <View key={row.id} style={[styles.row, index === rows.length - 1 ? styles.lastRow : null]}>
@@ -75,6 +83,10 @@ const styles = StyleSheet.create({
   title: {
     color: '#FFFFFF',
     fontWeight: '700',
+  },
+  emptyText: {
+    color: '#A1A1AA',
+    lineHeight: 21,
   },
   row: {
     alignItems: 'flex-start',

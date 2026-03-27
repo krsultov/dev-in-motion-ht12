@@ -1,16 +1,63 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { Avatar, Button, Card, Chip, Divider, Surface, Switch, Text } from 'react-native-paper';
 
 import { ScreenShell } from '@/components/screen-shell';
 import { useAuth } from '@/context/auth-context';
-import { elderProfile, familyAccountProfile } from '@/data/dummy';
+import { buildElderProfile } from '@/lib/dashboard-data';
+import { getCurrentUserMemory } from '@/lib/memory-api';
+import type { UserMemoryRecord } from '@/types/memory';
+
+const familyAccountProfile = {
+  name: 'Family member',
+  notificationPreferences: [
+    { id: 'purchases', label: 'Purchases', enabled: true },
+    { id: 'wellness-alerts', label: 'Wellness Alerts', enabled: true },
+    { id: 'unusual-activity', label: 'Unusual Activity', enabled: false },
+  ],
+  permissionLevel: 'Local Frontend Access',
+  relationshipLabel: 'Family member',
+};
 
 export default function ProfileScreen() {
   const { signOut, user } = useAuth();
+  const [memoryRecord, setMemoryRecord] = useState<UserMemoryRecord | null>(null);
   const [notificationPreferences, setNotificationPreferences] = useState(
     familyAccountProfile.notificationPreferences,
+  );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadMemory = async () => {
+      if (!user?.phone) {
+        setMemoryRecord(null);
+        return;
+      }
+
+      try {
+        const record = await getCurrentUserMemory(user.phone);
+        if (isMounted) {
+          setMemoryRecord(record);
+        }
+      } catch {
+        if (isMounted) {
+          setMemoryRecord(null);
+        }
+      }
+    };
+
+    void loadMemory();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.phone]);
+
+  const elderProfile = useMemo(
+    () => buildElderProfile(memoryRecord, user?.phone ?? null),
+    [memoryRecord, user?.phone],
   );
 
   const handleToggle = (id: string) => {
@@ -42,7 +89,7 @@ export default function ProfileScreen() {
           <View style={styles.profileHeader}>
             <Avatar.Text
               size={72}
-              label="MA"
+              label={elderProfile.initials}
               labelStyle={styles.avatarLabel}
               style={styles.primaryAvatar}
             />
@@ -51,24 +98,25 @@ export default function ProfileScreen() {
                 {elderProfile.name}
               </Text>
               <Text variant="bodyMedium" style={styles.profileMeta}>
-                {elderProfile.age} years old | {elderProfile.city}
+                {elderProfile.phone}
               </Text>
             </View>
           </View>
 
           <Text variant="bodyMedium" style={styles.bio}>
-            {elderProfile.bio}
+            This section is now driven by the live user memory record. Extra profile fields like age,
+            city, and bio do not exist in the backend yet.
           </Text>
 
           <View style={styles.chipRow}>
             <Chip compact style={[styles.infoChip, styles.languageChip]} textStyle={styles.darkChipText}>
-              {elderProfile.primaryLanguage}
+              {memoryRecord?.preferences.length ? 'Has preferences' : 'No preferences yet'}
             </Chip>
             <Chip compact style={[styles.infoChip, styles.livingChip]} textStyle={styles.lightChipText}>
-              {elderProfile.livingSituation}
+              {memoryRecord?.medications.length ? 'Has medications' : 'No medications yet'}
             </Chip>
             <Chip compact style={[styles.infoChip, styles.relationshipChip]} textStyle={styles.darkChipText}>
-              {elderProfile.relationshipToUser}
+              {memoryRecord?.contacts.length ? 'Has contacts' : 'No contacts yet'}
             </Chip>
           </View>
         </Card.Content>
@@ -92,7 +140,7 @@ export default function ProfileScreen() {
                 {user?.name ?? familyAccountProfile.name}
               </Text>
               <Text variant="bodyMedium" style={styles.profileMeta}>
-                {familyAccountProfile.relationshipLabel}
+                Frontend-only sign-in
               </Text>
             </View>
           </View>

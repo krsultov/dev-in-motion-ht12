@@ -1,20 +1,82 @@
+import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { Avatar, Card, Surface, Text } from 'react-native-paper';
 
 import { HomeMonthCalendar } from '@/components/home-month-calendar';
 import { ScreenShell } from '@/components/screen-shell';
 import { StatusTag } from '@/components/status-tag';
 import { useAuth } from '@/context/auth-context';
-import { activityItems, approvals, calendarMonthActivities, parentProfile } from '@/data/dummy';
+import {
+  buildCalendarActivities,
+  buildElderProfile,
+  buildRecentActivity,
+} from '@/lib/dashboard-data';
+import { getCurrentUserMemory } from '@/lib/memory-api';
+import { listReminders } from '@/lib/reminders-api';
+import type { UserMemoryRecord } from '@/types/memory';
+import type { ReminderRecord } from '@/types/reminder';
 
 export default function HomeScreen() {
-  const router = useRouter();
   const { user } = useAuth();
-  const recentItems = activityItems.slice(0, 2);
-  const pendingCount = approvals.filter((item) => item.status === 'pending').length;
-  const todayCount = activityItems.filter((item) => item.day === 'Today').length;
+  const [memoryRecord, setMemoryRecord] = useState<UserMemoryRecord | null>(null);
+  const [reminders, setReminders] = useState<ReminderRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadDashboard = async () => {
+      if (!user?.phone) {
+        setMemoryRecord(null);
+        setReminders([]);
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+
+      try {
+        const [memory, reminderList] = await Promise.all([
+          getCurrentUserMemory(user.phone),
+          listReminders(),
+        ]);
+
+        if (!isMounted) {
+          return;
+        }
+
+        setMemoryRecord(memory);
+        setReminders(reminderList);
+        setErrorMessage(null);
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        setErrorMessage(error instanceof Error ? error.message : 'Unable to load dashboard data.');
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void loadDashboard();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.phone]);
+
+  const elderProfile = useMemo(
+    () => buildElderProfile(memoryRecord, user?.phone ?? null),
+    [memoryRecord, user?.phone],
+  );
+  const calendarMonthActivities = useMemo(() => buildCalendarActivities(reminders), [reminders]);
+  const recentItems = useMemo(() => buildRecentActivity(reminders), [reminders]);
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const todayCount = calendarMonthActivities.filter((item) => item.date === todayKey).length;
 
   return (
     <ScreenShell>
@@ -29,28 +91,48 @@ export default function HomeScreen() {
         <View style={styles.heroTopRow}>
           <Avatar.Text
             size={54}
-            label={parentProfile.initials}
+            label={elderProfile.initials}
             labelStyle={styles.avatarLabel}
             style={styles.avatar}
           />
           <View style={styles.heroText}>
             <Text variant="titleLarge" style={styles.parentName}>
-              {parentProfile.name}
+              {elderProfile.name}
             </Text>
             <Text variant="bodySmall" style={styles.parentMeta}>
-              Last active: {parentProfile.lastActive}
+              Last updated: {elderProfile.lastUpdatedLabel}
             </Text>
           </View>
         </View>
 
         <View style={styles.heroTags}>
           <StatusTag
-            label={parentProfile.aiActive ? 'AI active' : 'AI inactive'}
-            tone={parentProfile.aiActive ? 'approved' : 'declined'}
+            label={elderProfile.aiActive ? 'AI active' : 'AI inactive'}
+            tone={elderProfile.aiActive ? 'approved' : 'declined'}
           />
-          <StatusTag label={`${todayCount} tasks today`} tone="calendar" />
+          <StatusTag label={`${todayCount} reminders today`} tone="calendar" />
         </View>
       </Surface>
+
+      {isLoading ? (
+        <Card mode="outlined" style={styles.stateCard}>
+          <Card.Content>
+            <Text variant="bodyMedium" style={styles.stateText}>
+              Loading live dashboard data.
+            </Text>
+          </Card.Content>
+        </Card>
+      ) : null}
+
+      {!isLoading && errorMessage ? (
+        <Card mode="outlined" style={styles.stateCard}>
+          <Card.Content>
+            <Text variant="bodyMedium" style={styles.stateText}>
+              {errorMessage}
+            </Text>
+          </Card.Content>
+        </Card>
+      ) : null}
 
       <View style={styles.sectionHeader}>
         <Text variant="titleMedium" style={styles.sectionTitle}>
@@ -60,39 +142,30 @@ export default function HomeScreen() {
 
       <Card mode="outlined" style={styles.timelineCard}>
         <Card.Content style={styles.timelineContent}>
-          {recentItems.map((item, index) => (
-            <View key={item.id} style={styles.timelineRow}>
-              <View style={styles.timelineRail}>
-                <View
-                  style={[styles.timelineDot, index === 1 ? styles.timelineDotSecondary : null]}
-                />
-                {index < recentItems.length - 1 ? <View style={styles.timelineLine} /> : null}
+          {recentItems.length > 0 ? (
+            recentItems.map((item, index) => (
+              <View key={item.id} style={styles.timelineRow}>
+                <View style={styles.timelineRail}>
+                  <View
+                    style={[styles.timelineDot, index === 1 ? styles.timelineDotSecondary : null]}
+                  />
+                  {index < recentItems.length - 1 ? <View style={styles.timelineLine} /> : null}
+                </View>
+                <View style={styles.timelineTextBlock}>
+                  <Text variant="titleSmall" style={styles.timelineTitle}>
+                    {item.title}
+                  </Text>
+                  <Text variant="bodySmall" style={styles.timelineDescription}>
+                    {item.description}
+                  </Text>
+                </View>
               </View>
-              <View style={styles.timelineTextBlock}>
-                <Text variant="titleSmall" style={styles.timelineTitle}>
-                  {item.title}
-                </Text>
-                <Text variant="bodySmall" style={styles.timelineDescription}>
-                  {item.description}
-                </Text>
-              </View>
-            </View>
-          ))}
-        </Card.Content>
-      </Card>
-
-      <Card mode="outlined" style={styles.alertCard} onPress={() => router.push('/(tabs)/approvals')}>
-        <Card.Content style={styles.alertContent}>
-          <View style={styles.alertText}>
-            <Text variant="titleMedium" style={styles.alertTitle}>
-              Pending approval
+            ))
+          ) : (
+            <Text variant="bodyMedium" style={styles.emptyText}>
+              No reminder activity yet.
             </Text>
-            <Text variant="bodyMedium" style={styles.alertSubtitle}>
-              Review requests and purchases that need your confirmation.
-            </Text>
-          </View>
-          <StatusTag label={`${pendingCount} pending`} tone="pending" />
-          <Ionicons name="chevron-forward" size={18} color="#7C7893" />
+          )}
         </Card.Content>
       </Card>
 
@@ -158,6 +231,16 @@ const styles = StyleSheet.create({
   sectionHeader: {
     marginBottom: 14,
   },
+  stateCard: {
+    backgroundColor: '#1E1E1E',
+    borderColor: '#303038',
+    borderRadius: 18,
+    marginBottom: 18,
+  },
+  stateText: {
+    color: '#A1A1AA',
+    lineHeight: 20,
+  },
   sectionTitle: {
     color: '#A1A1AA',
     fontSize: 13,
@@ -210,26 +293,8 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     marginTop: 4,
   },
-  alertCard: {
-    backgroundColor: '#1E1E1E',
-    borderColor: '#303038',
-    borderRadius: 18,
-  },
-  alertContent: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 12,
-  },
-  alertText: {
-    flex: 1,
-  },
-  alertTitle: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
-  alertSubtitle: {
+  emptyText: {
     color: '#A1A1AA',
-    lineHeight: 19,
-    marginTop: 4,
+    lineHeight: 20,
   },
 });

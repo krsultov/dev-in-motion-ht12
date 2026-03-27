@@ -1,7 +1,7 @@
 import { StyleSheet } from 'react-native';
 import { Chip } from 'react-native-paper';
 
-import type { ActivityCategory, ApprovalStatus } from '@/data/dummy';
+import type { ActivityCategory, ApprovalStatus } from '@/types/ui-models';
 
 type StatusTagProps = {
   label: string;

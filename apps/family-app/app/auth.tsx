@@ -4,7 +4,6 @@ import { router } from 'expo-router';
 import { Button, Surface, Text, TextInput } from 'react-native-paper';
 
 import { useAuth } from '@/context/auth-context';
-import { parentProfile } from '@/data/dummy';
 
 export default function AuthScreen() {
   const [name, setName] = useState<string>('');
@@ -33,7 +32,7 @@ export default function AuthScreen() {
           Nelson
         </Text>
         <Text variant="bodyLarge" style={styles.subtitle}>
-          Stay informed about how the AI assistant is helping {parentProfile.name}.
+          Stay informed about how the AI assistant is helping your family member.
         </Text>
 
         <Surface style={styles.card} elevation={1}>
