@@ -1,5 +1,6 @@
 'use client'
 
+import { SUBSCRIPTION_PRICE, PER_MINUTE_RATE } from '@/lib/pricing'
 import {
   AreaChart,
   Area,
@@ -29,8 +30,8 @@ function buildUserGrowth(total: number) {
 function buildRevenue(subUsers: number, pmUsers: number) {
   return MONTHS.map((month, i) => ({
     month,
-    subscription: Math.round(subUsers * 4.99 * GROWTH[i]),
-    perMinute: Math.round(pmUsers * 45 * 0.15 * GROWTH[i]),
+    subscription: Math.round(subUsers * SUBSCRIPTION_PRICE * GROWTH[i]),
+    perMinute: Math.round(pmUsers * 45 * PER_MINUTE_RATE * GROWTH[i]),
   }))
 }
 

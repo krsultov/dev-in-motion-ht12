@@ -1,10 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-
-const NELSON_COST_PER_MIN = 0.10
-const SUBSCRIPTION_PRICE = 4.99
-const PER_MINUTE_RATE = 0.15
+import { NELSON_COST_PER_MIN, SUBSCRIPTION_PRICE, PER_MINUTE_RATE } from '@/lib/pricing'
 
 function Slider({
   label,

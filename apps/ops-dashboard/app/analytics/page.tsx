@@ -2,6 +2,7 @@ import { PageShell } from '@/components/PageShell'
 import { AnalyticsCharts } from '@/components/AnalyticsCharts'
 import { getPlan } from '@/app/users/page'
 import type { UserRecord } from '@/app/users/page'
+import { SUBSCRIPTION_PRICE, PER_MINUTE_RATE, NELSON_COST_PER_MIN } from '@/lib/pricing'
 
 async function getUsers(): Promise<UserRecord[]> {
   try {
@@ -21,8 +22,8 @@ export default async function AnalyticsPage() {
 
   const subscriptionUsers = users.filter((u) => getPlan(u._id).type === 'subscription').length
   const perMinuteUsers = users.length - subscriptionUsers
-  const monthlyRevenue = subscriptionUsers * 4.99 + perMinuteUsers * 45 * 0.15
-  const monthlyCost = users.length * 45 * 0.10
+  const monthlyRevenue = subscriptionUsers * SUBSCRIPTION_PRICE + perMinuteUsers * 45 * PER_MINUTE_RATE
+  const monthlyCost = users.length * 45 * NELSON_COST_PER_MIN
   const profit = monthlyRevenue - monthlyCost
 
   return (
@@ -35,8 +36,8 @@ export default async function AnalyticsPage() {
         <div className="grid grid-cols-4 gap-4">
           {[
             { label: 'Total users', value: `${users.length}`, sub: `${subscriptionUsers} sub · ${perMinuteUsers} per-min`, color: 'text-white' },
-            { label: 'Est. monthly revenue', value: `€${monthlyRevenue.toFixed(0)}`, sub: 'subs × €4.99 + p/m × 45min × €0.15', color: 'text-white' },
-            { label: 'Nelson cost', value: `€${monthlyCost.toFixed(0)}`, sub: 'all users × 45min avg × €0.10/min', color: 'text-white' },
+            { label: 'Est. monthly revenue', value: `€${monthlyRevenue.toFixed(0)}`, sub: `subs × €${SUBSCRIPTION_PRICE} + p/m × 45min × €${PER_MINUTE_RATE}`, color: 'text-white' },
+            { label: 'Nelson cost', value: `€${monthlyCost.toFixed(0)}`, sub: `all users × 45min avg × €${NELSON_COST_PER_MIN}/min`, color: 'text-white' },
             { label: 'Est. profit', value: `€${profit.toFixed(0)}`, sub: 'revenue − cost · use calculator for detail', color: profit >= 0 ? 'text-[#4ade80]' : 'text-[#f87171]' },
           ].map((s, i) => (
             <div key={s.label} className="animate-fade-up bg-[#27272a] rounded-2xl p-5 border border-zinc-800" style={{ animationDelay: `${i * 80}ms` }}>

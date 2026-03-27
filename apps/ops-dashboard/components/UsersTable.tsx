@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react'
 import { X } from 'lucide-react'
 import type { UserRecord } from '@/app/users/page'
 import { getPlan } from '@/app/users/page'
+import { SUBSCRIPTION_PRICE, PER_MINUTE_RATE } from '@/lib/pricing'
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-GB', {
@@ -127,7 +128,7 @@ export function UsersTable({ users }: { users: UserRecord[] }) {
                   ? 'bg-[#2e2b5c] text-[#7c73e6]'
                   : 'bg-[#1a3a2a] text-[#4ade80]'
               }`}>
-                {getPlan(selected._id).type === 'subscription' ? 'Subscription — €4.99/mo' : 'Per-minute — €0.15/min'}
+                {getPlan(selected._id).type === 'subscription' ? `Subscription — €${SUBSCRIPTION_PRICE}/mo` : `Per-minute — €${PER_MINUTE_RATE}/min`}
               </span>
             </div>
 

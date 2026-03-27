@@ -1,5 +1,6 @@
 import { PageShell } from '@/components/PageShell'
 import { UsersTable } from '@/components/UsersTable'
+import { SUBSCRIPTION_PRICE, PER_MINUTE_RATE } from '@/lib/pricing'
 
 export type UserRecord = {
   _id: string
@@ -15,8 +16,8 @@ export type UserRecord = {
 
 export function getPlan(id: string): { type: 'subscription' | 'per-minute'; price: string } {
   return parseInt(id.slice(-2), 16) < 128
-    ? { type: 'subscription', price: '€4.99/mo' }
-    : { type: 'per-minute', price: '€0.15/min' }
+    ? { type: 'subscription', price: `€${SUBSCRIPTION_PRICE}/mo` }
+    : { type: 'per-minute', price: `€${PER_MINUTE_RATE}/min` }
 }
 
 async function getUsers(): Promise<UserRecord[]> {
