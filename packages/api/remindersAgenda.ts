@@ -83,7 +83,7 @@ export async function scheduleReminderAgendaJobs(doc: ReminderAgendaRow): Promis
 
   if (doc.cron && doc.cron.trim() !== "") {
     const end = new Date(doc.endTime);
-    if (end.getTime() <= Date.now()) {
+    if (isNaN(end.getTime()) || end.getTime() <= Date.now()) {
       return;
     }
     await agenda.every(doc.cron.trim(), REMINDER_JOB_CRON, { reminderId }, { endDate: end });
@@ -91,7 +91,7 @@ export async function scheduleReminderAgendaJobs(doc: ReminderAgendaRow): Promis
   }
 
   const start = new Date(doc.startTime);
-  if (start.getTime() <= Date.now()) {
+  if (isNaN(start.getTime()) || start.getTime() <= Date.now()) {
     return;
   }
   await agenda.schedule(start, REMINDER_JOB_START, { reminderId });
