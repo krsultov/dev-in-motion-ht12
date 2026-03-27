@@ -5,44 +5,34 @@ import { Button, Card, Text } from 'react-native-paper';
 import { MemorySectionCard } from '@/components/memory-section-card';
 import { ScreenShell } from '@/components/screen-shell';
 import { useAuth } from '@/context/auth-context';
-import {
-  getCurrentUserMemory,
-  getLatestUserMemoryRecord,
-  memoryApiBaseUrl,
-} from '@/lib/memory-api';
+import { getCurrentUserMemory, memoryApiBaseUrl } from '@/lib/memory-api';
 import type { UserMemoryRecord } from '@/types/memory';
 
 export default function MemoryScreen() {
   const { user } = useAuth();
-  const userPhone = user?.phone ?? null;
   const [memoryRecord, setMemoryRecord] = useState<UserMemoryRecord | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [resolvedPhone, setResolvedPhone] = useState<string | null>(userPhone);
 
   const loadMemory = useCallback(
     async (mode: 'initial' | 'refresh' = 'initial', options?: { signal?: { aborted: boolean } }) => {
+      if (!user?.phone) {
+        setMemoryRecord(null);
+        setErrorMessage('Sign in with a phone number to load memory data.');
+        setIsLoading(false);
+        return;
+      }
+
       if (mode !== 'refresh') {
         setIsLoading(true);
       }
 
       try {
-        console.log('[memory-screen] loadMemory:start', { mode, user });
-        const fallbackRecord = !userPhone ? await getLatestUserMemoryRecord() : null;
-        const activePhone = userPhone?.trim() || fallbackRecord?.phone?.trim() || '';
-        const record = activePhone ? await getCurrentUserMemory(activePhone) : fallbackRecord;
-
+        const record = await getCurrentUserMemory(user.phone);
         if (options?.signal?.aborted) {
           return;
         }
 
-        console.log('[memory-screen] loadMemory:resolved', {
-          activePhone,
-          fallbackRecord,
-          record,
-        });
-
-        setResolvedPhone(activePhone || null);
         setMemoryRecord(record);
         setErrorMessage(null);
       } catch (error) {
@@ -56,14 +46,13 @@ export default function MemoryScreen() {
             ? error.message
             : 'Unable to load memory data right now.',
         );
-        console.log('[memory-screen] loadMemory:failed', { error });
       } finally {
         if (!options?.signal?.aborted) {
           setIsLoading(false);
         }
       }
     },
-    [user, userPhone],
+    [user?.phone],
   );
 
   useEffect(() => {
@@ -74,15 +63,6 @@ export default function MemoryScreen() {
       request.aborted = true;
     };
   }, [loadMemory]);
-
-  useEffect(() => {
-    console.log('[memory-screen] render state', {
-      errorMessage,
-      isLoading,
-      memoryRecord,
-      resolvedPhone,
-    });
-  }, [errorMessage, isLoading, memoryRecord, resolvedPhone]);
 
   const screenTitle = memoryRecord?.name
     ? `${memoryRecord.name}'s profile`
@@ -102,7 +82,7 @@ export default function MemoryScreen() {
           Linked phone
         </Text>
         <Text variant="bodyMedium" style={styles.statusValue}>
-          {resolvedPhone ?? user?.phone ?? 'Not available'}
+          {user?.phone ?? 'Not available'}
         </Text>
       </View>
 

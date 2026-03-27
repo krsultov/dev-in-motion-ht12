@@ -139,30 +139,12 @@ function resolveHost() {
 }
 
 export function getServiceBaseUrl(port: number) {
-  const { host, source } = resolveHost();
-  const baseUrl = `http://${host}:${port}`;
-
-  console.log('[api] base-url:resolved', {
-    configuredApiUrl: process.env.EXPO_PUBLIC_API_URL ?? null,
-    host,
-    port,
-    source,
-    baseUrl,
-    platform: Platform.OS,
-  });
-
-  return baseUrl;
+  const { host } = resolveHost();
+  return `http://${host}:${port}`;
 }
 
 export async function requestJson<T>(baseUrl: string, path: string, init?: RequestInit): Promise<T> {
   const url = `${baseUrl}${path}`;
-  const method = init?.method ?? 'GET';
-
-  console.log('[api] request:start', {
-    body: init?.body,
-    method,
-    url,
-  });
 
   let response: Response;
 
@@ -178,29 +160,14 @@ export async function requestJson<T>(baseUrl: string, path: string, init?: Reque
     const originalMessage = error instanceof Error ? error.message : 'Network request failed';
     const helpfulMessage = buildHelpfulErrorMessage(originalMessage, url);
 
-    console.log('[api] request:threw', {
-      helpfulMessage,
-      method,
-      originalMessage,
-      url,
-    });
-
     throw new Error(helpfulMessage);
   }
-
-  console.log('[api] request:response', {
-    method,
-    ok: response.ok,
-    status: response.status,
-    url,
-  });
 
   if (!response.ok) {
     let message = `Request failed with status ${response.status}`;
 
     try {
       const payload = (await response.json()) as { error?: string };
-      console.log('[api] request:error-payload', { method, payload, url });
       if (payload.error) {
         message = payload.error;
       }
@@ -211,7 +178,5 @@ export async function requestJson<T>(baseUrl: string, path: string, init?: Reque
     throw new Error(buildHelpfulErrorMessage(message, url));
   }
 
-  const payload = (await response.json()) as T;
-  console.log('[api] request:success-payload', { method, payload, url });
-  return payload;
+  return (await response.json()) as T;
 }

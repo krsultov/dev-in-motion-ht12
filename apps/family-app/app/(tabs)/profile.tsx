@@ -1,50 +1,30 @@
-import { useEffect, useMemo, useState } from "react";
-import { StyleSheet, View } from "react-native";
-import { router } from "expo-router";
-import {
-  Avatar,
-  Button,
-  Card,
-  Chip,
-  Divider,
-  Surface,
-  Switch,
-  Text,
-} from "react-native-paper";
+import { useEffect, useMemo, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
+import { router } from 'expo-router';
+import { Avatar, Button, Card, Chip, Divider, Surface, Switch, Text } from 'react-native-paper';
 
-import { ScreenShell } from "@/components/screen-shell";
-import { useAuth } from "@/context/auth-context";
-import { buildElderProfile } from "@/lib/dashboard-data";
-import {
-  getCurrentUserMemory,
-  getLatestUserMemoryRecord,
-} from "@/lib/memory-api";
-import type { UserMemoryRecord } from "@/types/memory";
+import { ScreenShell } from '@/components/screen-shell';
+import { useAuth } from '@/context/auth-context';
+import { buildElderProfile } from '@/lib/dashboard-data';
+import { getCurrentUserMemory } from '@/lib/memory-api';
+import type { UserMemoryRecord } from '@/types/memory';
 
 const familyAccountProfile = {
-  name: "Family member",
+  name: 'Family member',
   notificationPreferences: [
-    { id: "purchases", label: "Purchases", enabled: true },
-    { id: "wellness-alerts", label: "Wellness Alerts", enabled: true },
-    { id: "unusual-activity", label: "Unusual Activity", enabled: false },
+    { id: 'purchases', label: 'Purchases', enabled: true },
+    { id: 'wellness-alerts', label: 'Wellness Alerts', enabled: true },
+    { id: 'unusual-activity', label: 'Unusual Activity', enabled: false },
   ],
-  permissionLevel: "Local Frontend Access",
-  relationshipLabel: "Family member",
+  permissionLevel: 'Local Frontend Access',
+  relationshipLabel: 'Family member',
 };
 
 export default function ProfileScreen() {
   const { signOut, user } = useAuth();
-  const userName = user?.name ?? null;
-  const userPhone = user?.phone ?? null;
-  const [memoryRecord, setMemoryRecord] = useState<UserMemoryRecord | null>(
-    null,
-  );
+  const [memoryRecord, setMemoryRecord] = useState<UserMemoryRecord | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [resolvedPhone, setResolvedPhone] = useState<string | null>(userPhone);
-  const [resolvedUserName, setResolvedUserName] = useState<string | null>(
-    userName,
-  );
   const [notificationPreferences, setNotificationPreferences] = useState(
     familyAccountProfile.notificationPreferences,
   );
@@ -53,30 +33,20 @@ export default function ProfileScreen() {
     let isMounted = true;
 
     const loadMemory = async () => {
+      if (!user?.phone) {
+        setMemoryRecord(null);
+        setErrorMessage('Sign in with a phone number to load the live profile.');
+        setIsLoading(false);
+        return;
+      }
+
       setIsLoading(true);
       setErrorMessage(null);
 
       try {
-        console.log("[profile-screen] loadMemory:start", { user });
-        const fallbackRecord = !userPhone
-          ? await getLatestUserMemoryRecord()
-          : null;
-        const activePhone =
-          userPhone?.trim() || fallbackRecord?.phone?.trim() || "";
-        const record = activePhone
-          ? await getCurrentUserMemory(activePhone)
-          : fallbackRecord;
+        const record = await getCurrentUserMemory(user.phone);
 
         if (isMounted) {
-          console.log("[profile-screen] loadMemory:resolved", {
-            activePhone,
-            fallbackRecord,
-            record,
-          });
-          setResolvedPhone(activePhone || null);
-          setResolvedUserName(
-            (userName?.trim() || record?.name) ?? "Family member",
-          );
           setMemoryRecord(record);
           setErrorMessage(null);
         }
@@ -86,9 +56,8 @@ export default function ProfileScreen() {
           setErrorMessage(
             error instanceof Error
               ? error.message
-              : "Unable to load the live profile right now.",
+              : 'Unable to load the live profile right now.',
           );
-          console.log("[profile-screen] loadMemory:failed", { error });
         }
       } finally {
         if (isMounted) {
@@ -102,21 +71,11 @@ export default function ProfileScreen() {
     return () => {
       isMounted = false;
     };
-  }, [user, userName, userPhone]);
-
-  useEffect(() => {
-    console.log("[profile-screen] render state", {
-      errorMessage,
-      isLoading,
-      memoryRecord,
-      resolvedPhone,
-      resolvedUserName,
-    });
-  }, [errorMessage, isLoading, memoryRecord, resolvedPhone, resolvedUserName]);
+  }, [user?.phone]);
 
   const elderProfile = useMemo(
-    () => buildElderProfile(memoryRecord, resolvedPhone),
-    [memoryRecord, resolvedPhone],
+    () => buildElderProfile(memoryRecord, user?.phone ?? null),
+    [memoryRecord, user?.phone],
   );
 
   const handleToggle = (id: string) => {
@@ -128,9 +87,8 @@ export default function ProfileScreen() {
   };
 
   const handleSignOut = () => {
-    console.log("[profile-screen] sign out tapped while auth is disabled");
     signOut();
-    router.replace("/(tabs)/home");
+    router.replace('/auth');
   };
 
   return (
@@ -263,10 +221,10 @@ export default function ProfileScreen() {
             />
             <View style={styles.profileCopy}>
               <Text variant="titleLarge" style={styles.profileName}>
-                {resolvedUserName ?? familyAccountProfile.name}
+                {user?.name ?? familyAccountProfile.name}
               </Text>
               <Text variant="bodyMedium" style={styles.profileMeta}>
-                Authentication disabled for testing
+                Frontend-only sign-in
               </Text>
             </View>
           </View>
