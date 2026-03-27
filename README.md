@@ -79,13 +79,12 @@ nelson/
 │  ├─ family-app/           # Expo (iOS + Android + Web) — family portal
 │  ├─ ops-dashboard/        # operator monitoring dashboard
 │  ├─ voice-gateway/        # Hono.js - call entrypoint, STT/TTS pipeline
-│  └─ api/                  # Hono.js - business logic, auth, jobs, REST
 │
 ├─ packages/
 │  ├─ agent-core/           # LLM orchestration, prompt, tool calling
 │  ├─ mcp/    # MCP servers
 │  ├─ reminders-domain/     # Scheduler, outbound call jobs
-│  ├─ api/     # APIs for MCP servers
+│  ├─ api/     # APIs for MCP servers in ExpressJS
 │  ├─ shared-types/         # Zod schemas
 │  ├─ db/                   # MongoDB pool
 │
