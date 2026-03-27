@@ -12,6 +12,7 @@ export type UserRecord = {
   contacts?: unknown[]
   medications?: unknown[]
   preferences?: unknown[]
+  memoriesCount?: number
   createdAt: string
   updatedAt: string
 }
@@ -45,6 +46,20 @@ async function getUsers(): Promise<UserRecord[]> {
   }
 }
 
+async function getMemoryCount(phone: string): Promise<number> {
+  try {
+    const res = await fetch(
+      `${process.env.MEMORIES_API_URL ?? 'http://localhost:3001'}/memories?userId=${encodeURIComponent(phone)}`,
+      { cache: 'no-store' },
+    )
+    if (!res.ok) return 0
+    const data = await res.json()
+    return Array.isArray(data) ? data.length : 0
+  } catch {
+    return 0
+  }
+}
+
 async function getStats(): Promise<StatsOverview | null> {
   try {
     const res = await fetch(
@@ -60,6 +75,9 @@ async function getStats(): Promise<StatsOverview | null> {
 
 export default async function UsersPage() {
   const [users, stats] = await Promise.all([getUsers(), getStats()])
+
+  const memoryCounts = await Promise.all(users.map((u) => getMemoryCount(u.phone)))
+  const usersWithCounts = users.map((u, i) => ({ ...u, memoriesCount: memoryCounts[i] }))
 
   const subscriptionUsers = stats?.planDistribution.subscription
     ?? users.filter((u) => getPlan(u).type === 'subscription').length
@@ -105,8 +123,8 @@ export default async function UsersPage() {
           revenueData={revenueData}
         />
 
-        <div className="overflow-y-auto max-h-[420px] rounded-2xl scrollbar-thin">
-          <UsersTable users={users} />
+        <div className="rounded-2xl">
+          <UsersTable users={usersWithCounts} />
         </div>
       </div>
     </PageShell>

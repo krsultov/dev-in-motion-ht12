@@ -53,15 +53,6 @@ export function Sidebar() {
         </ul>
       </nav>
 
-      <div className="px-4 py-4 border-t border-zinc-800 flex items-center gap-3">
-        <div className="w-8 h-8 rounded-full bg-[#1e3a5f] flex items-center justify-center text-xs font-bold text-blue-300 flex-shrink-0">
-          TK
-        </div>
-        <div className="min-w-0">
-          <div className="text-white text-sm font-medium leading-tight truncate">Teodor K.</div>
-          <div className="text-zinc-500 text-xs leading-tight">A1 Bulgaria</div>
-        </div>
-      </div>
     </aside>
   )
 }

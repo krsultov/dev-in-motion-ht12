@@ -162,7 +162,7 @@ export function CostCalculator({
               hint={subUsers === 0 ? 'No subscription users' : 'Affects Nelson cost only — flat fee regardless of usage'}
               value={subMinutes}
               min={5}
-              max={120}
+              max={1000}
               unit="min"
               disabled={subUsers === 0}
               onChange={setSubMinutes}
@@ -173,7 +173,7 @@ export function CostCalculator({
               hint={pmUsers === 0 ? 'No per-minute users' : 'Affects both revenue and Nelson cost'}
               value={pmMinutes}
               min={5}
-              max={120}
+              max={1000}
               unit="min"
               disabled={pmUsers === 0}
               onChange={setPmMinutes}

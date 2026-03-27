@@ -28,6 +28,11 @@ const tooltipLabelStyle = { color: '#fff', fontWeight: 600, marginBottom: 4 }
 
 const CHART_TITLES = ['User growth', 'Monthly revenue (€)', 'Plan split']
 
+function formatMonth(value: string) {
+  const [year, month] = value.split('-')
+  return new Date(Number(year), Number(month) - 1).toLocaleString('en-GB', { month: 'long', year: 'numeric' })
+}
+
 type UserGrowthEntry = { month: string; users: number }
 type RevenueEntry = { month: string; subscription: number; perMinute: number }
 
@@ -91,9 +96,9 @@ export function AnalyticsCharts({
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" />
-                <XAxis dataKey="month" tick={{ fill: '#71717a', fontSize: 12 }} axisLine={false} tickLine={false} />
+                <XAxis dataKey="month" tickFormatter={formatMonth} tick={{ fill: '#71717a', fontSize: 12 }} axisLine={false} tickLine={false} />
                 <YAxis width={30} tickFormatter={(v) => v === 0 || !Number.isInteger(v) ? '' : v} tick={{ fill: '#71717a', fontSize: 12 }} axisLine={false} tickLine={false} allowDecimals={false} />
-                <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} labelStyle={tooltipLabelStyle} separator=": " />
+                <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} labelStyle={tooltipLabelStyle} labelFormatter={formatMonth} separator=": " />
                 <Area type="monotone" dataKey="users" name="Users" stroke="#7c73e6" strokeWidth={2} fill="url(#userGradient)" animationDuration={1000} />
               </AreaChart>
             </ResponsiveContainer>
@@ -115,9 +120,9 @@ export function AnalyticsCharts({
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" />
-                <XAxis dataKey="month" tick={{ fill: '#71717a', fontSize: 12 }} axisLine={false} tickLine={false} />
+                <XAxis dataKey="month" tickFormatter={formatMonth} tick={{ fill: '#71717a', fontSize: 12 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: '#71717a', fontSize: 12 }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} labelStyle={tooltipLabelStyle} separator=": " />
+                <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} labelStyle={tooltipLabelStyle} labelFormatter={formatMonth} separator=": " />
                 <Area type="monotone" dataKey="subscription" stackId="a" stroke="#7c73e6" strokeWidth={2} fill="url(#subGradient)" name="Subscriptions" animationDuration={1000} />
                 <Area type="monotone" dataKey="perMinute" stackId="a" stroke="#4ade80" strokeWidth={2} fill="url(#pmGradient)" name="Per-minute" animationDuration={1000} />
               </AreaChart>

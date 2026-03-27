@@ -50,8 +50,6 @@ export function UsersTable({ users }: { users: UserRecord[] }) {
               <th className="px-5 py-3 font-medium">User</th>
               <th className="px-5 py-3 font-medium">Plan</th>
               <th className="px-5 py-3 font-medium">Memories</th>
-              <th className="px-5 py-3 font-medium">Contacts</th>
-              <th className="px-5 py-3 font-medium">Medications</th>
               <th className="px-5 py-3 font-medium">Joined</th>
             </tr>
           </thead>
@@ -83,16 +81,14 @@ export function UsersTable({ users }: { users: UserRecord[] }) {
                       {plan.type === 'subscription' ? 'Subscription' : 'Per-minute'}
                     </span>
                   </td>
-                  <td className="px-5 py-3 text-zinc-300">{user.memories?.length ?? 0}</td>
-                  <td className="px-5 py-3 text-zinc-300">{user.contacts?.length ?? 0}</td>
-                  <td className="px-5 py-3 text-zinc-300">{user.medications?.length ?? 0}</td>
+                  <td className="px-5 py-3 text-zinc-300">{user.memoriesCount ?? 0}</td>
                   <td className="px-5 py-3 text-zinc-500 text-xs">{formatDate(user.createdAt)}</td>
                 </tr>
               )
             })}
             {users.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-5 py-10 text-center text-zinc-500 text-sm">
+                <td colSpan={4} className="px-5 py-10 text-center text-zinc-500 text-sm">
                   No users found
                 </td>
               </tr>
@@ -134,10 +130,8 @@ export function UsersTable({ users }: { users: UserRecord[] }) {
 
             <div className="grid grid-cols-2 gap-2 mb-5">
               {[
-                { label: 'Memories', value: selected.memories?.length ?? 0 },
-                { label: 'Contacts', value: selected.contacts?.length ?? 0 },
-                { label: 'Medications', value: selected.medications?.length ?? 0 },
-                { label: 'Preferences', value: selected.preferences?.length ?? 0 },
+                { label: 'Memories', value: selected.memoriesCount ?? 0 },
+                { label: 'Min. Talked', value: '—' },
               ].map((s, i) => (
                 <div key={s.label} className="animate-fade-up bg-[#27272a] rounded-xl p-3 border border-zinc-800 text-center" style={{ animationDelay: `${80 + i * 50}ms` }}>
                   <p className="text-white font-bold text-lg leading-none">{s.value}</p>
