@@ -6,7 +6,8 @@ import { Card, IconButton, Surface, Text } from 'react-native-paper';
 import type { CalendarActivity } from '@/types/ui-models';
 
 const weekdayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-const reminderColor = '#8B8DF1';
+const upcomingReminderColor = '#8B8DF1';
+const previousReminderColor = '#D29B2F';
 
 function formatDateKey(value: Date) {
   const year = value.getFullYear();
@@ -170,9 +171,15 @@ export function HomeMonthCalendar({ reminders }: HomeMonthCalendarProps) {
 
         <View style={styles.legendRow}>
           <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: reminderColor }]} />
+            <View style={[styles.legendDot, { backgroundColor: upcomingReminderColor }]} />
             <Text variant="bodySmall" style={styles.legendText}>
-              Reminders
+              Upcoming
+            </Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: previousReminderColor }]} />
+            <Text variant="bodySmall" style={styles.legendText}>
+              Previous
             </Text>
           </View>
         </View>
@@ -191,6 +198,13 @@ export function HomeMonthCalendar({ reminders }: HomeMonthCalendarProps) {
             const dayReminders = remindersByDate[dayKey] ?? [];
             const hasReminders = dayReminders.length > 0;
             const isSelected = resolvedSelectedDate ? dayKey === resolvedSelectedDate : false;
+            const hasFutureReminders = dayReminders.some((item) => item.isFuture);
+            const hasPastReminders = dayReminders.some((item) => item.isPast);
+            const dayDotColor = hasFutureReminders
+              ? upcomingReminderColor
+              : hasPastReminders
+                ? previousReminderColor
+                : upcomingReminderColor;
 
             return (
               <Pressable
@@ -213,7 +227,7 @@ export function HomeMonthCalendar({ reminders }: HomeMonthCalendarProps) {
                   {day.getDate()}
                 </Text>
                 <View style={styles.dotRow}>
-                  {hasReminders ? <View style={[styles.dayDot, { backgroundColor: reminderColor }]} /> : null}
+                  {hasReminders ? <View style={[styles.dayDot, { backgroundColor: dayDotColor }]} /> : null}
                 </View>
               </Pressable>
             );
@@ -227,7 +241,12 @@ export function HomeMonthCalendar({ reminders }: HomeMonthCalendarProps) {
             </Text>
             {selectedReminders.map((item) => (
               <View key={item.id} style={styles.activityDrawerRow}>
-                <View style={[styles.activityDrawerDot, { backgroundColor: reminderColor }]} />
+                <View
+                  style={[
+                    styles.activityDrawerDot,
+                    { backgroundColor: item.isFuture ? upcomingReminderColor : previousReminderColor },
+                  ]}
+                />
                 <View style={styles.activityDrawerCopy}>
                   <Text variant="bodyMedium" style={styles.activityDrawerItemTitle}>
                     {item.title}
@@ -239,7 +258,7 @@ export function HomeMonthCalendar({ reminders }: HomeMonthCalendarProps) {
                   ) : null}
                   <Text variant="bodySmall" style={styles.activityDrawerItemDetail}>
                     {item.detail}
-                    {item.isFuture ? ' | upcoming' : ''}
+                    {item.isFuture ? ' | upcoming' : item.isPast ? ' | previous' : ''}
                   </Text>
                 </View>
               </View>

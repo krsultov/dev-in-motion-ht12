@@ -28,4 +28,5 @@ export type CalendarActivity = {
   description?: string;
   type: CalendarActivityType;
   isFuture?: boolean;
+  isPast?: boolean;
 };
