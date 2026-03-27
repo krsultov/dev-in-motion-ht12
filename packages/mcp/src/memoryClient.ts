@@ -6,7 +6,7 @@ import type { MemoryEntry } from "@nelson/shared-types";
  */
 export default async function getMemoryById(id: string): Promise<MemoryEntry> {
   const baseUrl = process.env.MEMORY_API_BASE_URL ?? "http://localhost:3001";
-  const res = await fetch(`${baseUrl}/memories/${encodeURIComponent(id)}`);
+  const res = await fetch(`${baseUrl}/memories/by-id/${encodeURIComponent(id)}`);
   if (!res.ok) {
     throw new Error(`Memory API GET /memories/${id} failed: ${res.status} ${await res.text().catch(() => "")}`);
   }

@@ -2,6 +2,7 @@ import type { ObjectId } from "mongodb";
 
 export type MemoryEntry = {
   id: string;
+  userId: string;
   key: string;
   value: string;
   createdAt: string;
@@ -10,6 +11,7 @@ export type MemoryEntry = {
 
 export type MemoryDoc = {
   _id: ObjectId;
+  userId: string;
   key: string;
   value: string;
   createdAt: string;
@@ -39,6 +41,7 @@ export type UserMemory = {
   phone: string;
   password: string;
   name?: string;
+  subscription?: boolean;
   memories?: string[];
   contacts?: Contact[];
   preferences?: Preference[];
@@ -51,8 +54,9 @@ export type Reminder = {
   _id: ObjectId;
   userId: string;
   title: string;
+  startTime: string;
   endTime: string;
-  cron: string;
+  cron?: string;
   description?: string;
   createdAt: string;
   updatedAt: string;
@@ -64,6 +68,7 @@ export type UserDataResponse = {
     phone?: string;
     password?: string;
     name?: string;
+    subscription?: boolean;
     memories: unknown[];
     contacts: unknown[];
     preferences: unknown[];
@@ -76,8 +81,9 @@ export type ReminderDoc = {
     _id: ObjectId;
     userId: string;
     title: string;
+    startTime: string;
     endTime: string;
-    cron: string;
+    cron?: string;
     description?: string;
     createdAt: string;
     updatedAt: string;
@@ -87,8 +93,9 @@ export type ReminderDoc = {
     _id: string;
     userId: string;
     title: string;
+    startTime: string;
     endTime: string;
-    cron: string;
+    cron?: string;
     description?: string;
     createdAt: string;
     updatedAt: string;
@@ -99,6 +106,5 @@ export type UserMemoryDoc = UserMemory & { _id: ObjectId };
 export type UserMemoryDto = UserMemory & { _id: string };
 
 //TODO:
-//Read all Memories for a user
 //Hash password
-//Call when remainder starts
+//Call when reminder starts (return call via Twilio)

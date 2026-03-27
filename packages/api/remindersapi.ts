@@ -9,6 +9,7 @@ import {
 } from "./remindersAgenda";
 
 type ReminderStored = {
+  userId: string;
   title: string;
   startTime: string;
   endTime: string;
@@ -37,7 +38,9 @@ function isIsoDateTime(value: unknown): value is string {
 function normalize(doc: ReminderDoc) {
   return {
     _id: doc._id.toHexString(),
+    userId: doc.userId,
     title: doc.title,
+    startTime: doc.startTime,
     endTime: doc.endTime,
     cron: doc.cron,
     description: doc.description,
@@ -71,10 +74,14 @@ async function getRemindersCollection(): Promise<Collection<ReminderStored>> {
 const app = express();
 app.use(express.json());
 
-app.get("/reminders", async (_req: any, res: any) => {
+app.get("/reminders", async (req: any, res: any) => {
   try {
+    const userId = typeof req.query?.userId === "string" ? req.query.userId.trim() : "";
+    const filter: Record<string, string> = {};
+    if (userId) filter.userId = userId;
+
     const collection = await getRemindersCollection();
-    const docs = await collection.find().sort({ startTime: 1 }).toArray();
+    const docs = await collection.find(filter).sort({ startTime: 1 }).toArray();
     res.status(200).json(docs.map(normalize));
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
@@ -102,6 +109,7 @@ app.get("/reminders/:_id", async (req: any, res: any) => {
 
 app.post("/reminders", async (req: any, res: any) => {
   try {
+    const userId = typeof req.body?.userId === "string" ? req.body.userId.trim() : "";
     const title = typeof req.body?.title === "string" ? req.body.title.trim() : "";
     const startTime = req.body?.startTime;
     const endTime = req.body?.endTime;
@@ -118,6 +126,10 @@ app.post("/reminders", async (req: any, res: any) => {
       }
     }
 
+    if (!userId) {
+      res.status(400).json({ error: "userId is required" });
+      return;
+    }
     if (!title) {
       res.status(400).json({ error: "title is required" });
       return;
@@ -131,6 +143,7 @@ app.post("/reminders", async (req: any, res: any) => {
     const collection = await getRemindersCollection();
 
     const doc = await collection.insertOne({
+      userId,
       title,
       startTime,
       endTime,

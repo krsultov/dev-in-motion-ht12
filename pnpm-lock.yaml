@@ -253,32 +253,26 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: ^1.28.0
         version: 1.28.0(zod@4.3.6)
+      '@nelson/db':
+        specifier: file:../db
+        version: link:../db
+      '@nelson/shared-types':
+        specifier: file:../shared-types
+        version: link:../shared-types
+      cron-parser:
+        specifier: ^5.5.0
+        version: 5.5.0
       express:
         specifier: ^5.2.1
         version: 5.2.1
+      mongodb:
+        specifier: ^7.1.1
+        version: 7.1.1
       zod:
         specifier: ^4.3.6
         version: 4.3.6
 
-  packages/mcp-reminders-server:
-    dependencies:
-      '@modelcontextprotocol/sdk':
-        specifier: ^1.6.0
-        version: 1.28.0(zod@4.3.6)
-      '@nelson/reminders-domain':
-        specifier: workspace:*
-        version: link:../reminders-domain
-    devDependencies:
-      '@types/node':
-        specifier: ^20.0.0
-        version: 20.19.37
-      typescript:
-        specifier: ^5.0.0
-        version: 5.9.3
-
-  packages/memory-domain: {}
-
-  packages/reminders-domain:
+  packages/shared-types:
     devDependencies:
       '@types/node':
         specifier: ^20.0.0

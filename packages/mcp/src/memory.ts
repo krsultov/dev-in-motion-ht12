@@ -1,31 +1,23 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { createMcpExpressApp } from "@modelcontextprotocol/sdk/server/express.js";
-import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod/v4";
 import type { MemoryEntry } from "@nelson/shared-types";
+import { startMcpServer } from "./mcp-express-setup";
 
-declare const process: {
-  env: Record<string, string | undefined>;
-  exit: (code?: number) => never;
-};
+const MEMORY_API_BASE_URL = process.env.MEMORY_API_BASE_URL ?? "http://localhost:3001";
 
-
-async function listMemories(): Promise<MemoryEntry[]> {
-  const baseUrl = process.env.MEMORY_API_BASE_URL ?? "http://localhost:3001";
-  const res = await fetch(`${baseUrl}/memories`);
+async function listMemories(userId: string): Promise<MemoryEntry[]> {
+  const res = await fetch(`${MEMORY_API_BASE_URL}/memories?userId=${encodeURIComponent(userId)}`);
   if (!res.ok) {
     throw new Error(`Memory API GET /memories failed: ${res.status} ${await res.text().catch(() => "")}`);
   }
   return (await res.json()) as MemoryEntry[];
 }
 
-async function addOrUpdateMemory(key: string, value: string): Promise<MemoryEntry> {
-  const baseUrl = process.env.MEMORY_API_BASE_URL ?? "http://localhost:3001";
-  const res = await fetch(`${baseUrl}/memories`, {
+async function addOrUpdateMemory(userId: string, key: string, value: string): Promise<MemoryEntry> {
+  const res = await fetch(`${MEMORY_API_BASE_URL}/memories`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ key, value }),
+    body: JSON.stringify({ userId, key, value }),
   });
   if (!res.ok) {
     throw new Error(`Memory API POST /memories failed: ${res.status} ${await res.text().catch(() => "")}`);
@@ -33,28 +25,15 @@ async function addOrUpdateMemory(key: string, value: string): Promise<MemoryEntr
   return (await res.json()) as MemoryEntry;
 }
 
-function makeId(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
+async function deleteMemory(userId: string, key: string): Promise<{ deletedCount: number }> {
+  const res = await fetch(
+    `${MEMORY_API_BASE_URL}/memories/${encodeURIComponent(key)}?userId=${encodeURIComponent(userId)}`,
+    { method: "DELETE" }
+  );
+  if (!res.ok) {
+    throw new Error(`Memory API DELETE /memories/${key} failed: ${res.status} ${await res.text().catch(() => "")}`);
   }
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
-function nowIso(): string {
-  return new Date().toISOString();
-}
-
-function isValidIsoDate(value: string): boolean {
-  return !Number.isNaN(new Date(value).getTime());
-}
-
-function validateRange(startAt: string, endAt: string): void {
-  if (!isValidIsoDate(startAt) || !isValidIsoDate(endAt)) {
-    throw new Error("startAt and endAt must be valid ISO date-time strings");
-  }
-  if (new Date(endAt).getTime() <= new Date(startAt).getTime()) {
-    throw new Error("endAt must be after startAt");
-  }
+  return (await res.json()) as { deletedCount: number };
 }
 
 function getServer(): McpServer {
@@ -63,146 +42,73 @@ function getServer(): McpServer {
     version: "0.1.0",
   });
 
-  server.registerResource(
-    "memory-store",
-    "memory://entries",
-    {
-      title: "Memory Entries",
-      description: "Current in-memory key-value entries.",
-      mimeType: "application/json",
-    },
-    async () => {
-      const data = await listMemories();
-      return {
-        contents: [
-          {
-            uri: "memory://entries",
-            mimeType: "application/json",
-            text: JSON.stringify(data, null, 2),
-          },
-        ],
-      };
-    }
-  );
-
   server.registerTool(
     "new-memory",
     {
-      description: "Create or update a memory key-value entry.",
+      description: "Create or update a memory key-value entry for a user.",
       inputSchema: {
+        userId: z.string().min(1),
         key: z.string().min(1),
         value: z.string(),
       },
     },
-    async ({ key, value }) => {
-      await addOrUpdateMemory(key, value);
-      const all = await listMemories();
-      server.sendResourceListChanged();
-      return {
-        content: [{ type: "text", text: JSON.stringify(all, null, 2) }],
-      };
+    async ({ userId, key, value }) => {
+      try {
+        await addOrUpdateMemory(userId, key, value);
+        const all = await listMemories(userId);
+        server.sendResourceListChanged();
+        return {
+          content: [{ type: "text", text: JSON.stringify(all, null, 2) }],
+        };
+      } catch (err) {
+        return { content: [{ type: "text", text: `Error: ${(err as Error).message}` }], isError: true };
+      }
     }
   );
 
   server.registerTool(
     "list-memory",
     {
-      description: "List all memory entries.",
+      description: "List all memory entries for a user.",
+      inputSchema: {
+        userId: z.string().min(1),
+      },
     },
-    async () => {
-      const all = await listMemories();
-      return {
-        content: [{ type: "text", text: JSON.stringify(all, null, 2) }],
-      };
+    async ({ userId }) => {
+      try {
+        const all = await listMemories(userId);
+        return {
+          content: [{ type: "text", text: JSON.stringify(all, null, 2) }],
+        };
+      } catch (err) {
+        return { content: [{ type: "text", text: `Error: ${(err as Error).message}` }], isError: true };
+      }
+    }
+  );
+
+  server.registerTool(
+    "delete-memory",
+    {
+      description: "Delete a memory entry by key for a user.",
+      inputSchema: {
+        userId: z.string().min(1),
+        key: z.string().min(1),
+      },
+    },
+    async ({ userId, key }) => {
+      try {
+        const result = await deleteMemory(userId, key);
+        return {
+          content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+        };
+      } catch (err) {
+        return { content: [{ type: "text", text: `Error: ${(err as Error).message}` }], isError: true };
+      }
     }
   );
 
   return server;
 }
 
-function readSessionId(header: unknown): string | undefined {
-  if (typeof header === "string") return header;
-  if (Array.isArray(header) && typeof header[0] === "string") return header[0];
-  return undefined;
-}
-
-const app = createMcpExpressApp();
-const transports: Record<string, StreamableHTTPServerTransport> = {};
-
-app.post("/mcp", async (req: any, res: any) => {
-  try {
-    const headerVal =
-      typeof req?.get === "function" ? req.get("mcp-session-id") : (req?.headers?.["mcp-session-id"] ?? undefined);
-    const sessionId = readSessionId(headerVal);
-    let transport: StreamableHTTPServerTransport | undefined;
-
-    if (sessionId && transports[sessionId]) {
-      transport = transports[sessionId];
-    } else if (!sessionId && isInitializeRequest(req.body)) {
-      const createdTransport = new StreamableHTTPServerTransport({
-        sessionIdGenerator: makeId,
-        onsessioninitialized: (newSessionId) => {
-          transports[newSessionId] = createdTransport;
-        },
-      });
-      createdTransport.onclose = () => {
-        const currentId = createdTransport.sessionId;
-        if (currentId) {
-          delete transports[currentId];
-        }
-      };
-      transport = createdTransport;
-      const server = getServer();
-      await server.connect(createdTransport);
-    } else {
-      res.status(400).json({
-        jsonrpc: "2.0",
-        error: { code: -32000, message: "Bad Request: No valid session ID provided" },
-        id: null,
-      });
-      return;
-    }
-
-    await transport.handleRequest(req, res, req.body);
-  } catch (error) {
-    console.error("Error handling MCP POST /mcp request:", error);
-    if (!res.headersSent) {
-      res.status(500).json({
-        jsonrpc: "2.0",
-        error: { code: -32603, message: "Internal server error" },
-        id: null,
-      });
-    }
-  }
-});
-
-app.get("/mcp", async (req: any, res: any) => {
-  const headerVal =
-    typeof req?.get === "function" ? req.get("mcp-session-id") : (req?.headers?.["mcp-session-id"] ?? undefined);
-  const sessionId = readSessionId(headerVal);
-  if (!sessionId || !transports[sessionId]) {
-    res.status(400).send("Invalid or missing session ID");
-    return;
-  }
-  await transports[sessionId].handleRequest(req, res);
-});
-
-app.delete("/mcp", async (req: any, res: any) => {
-  const headerVal =
-    typeof req?.get === "function" ? req.get("mcp-session-id") : (req?.headers?.["mcp-session-id"] ?? undefined);
-  const sessionId = readSessionId(headerVal);
-  if (!sessionId || !transports[sessionId]) {
-    res.status(400).send("Invalid or missing session ID");
-    return;
-  }
-  await transports[sessionId].handleRequest(req, res);
-});
-
-const PORT = Number(process.env.PORT ?? 3000);
-app.listen(PORT, (error?: Error) => {
-  if (error) {
-    console.error("Failed to start MCP server:", error);
-    process.exit(1);
-  }
-  console.log(`Calendar + Memory MCP server running at http://localhost:${PORT}/mcp`);
-});
+const PORT = Number(process.env.MEMORY_MCP_PORT ?? 3005);
+startMcpServer("calendar-memory-mcp", PORT, getServer);
