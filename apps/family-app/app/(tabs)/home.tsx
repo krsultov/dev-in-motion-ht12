@@ -136,7 +136,7 @@ export default function HomeScreen() {
 
       <View style={styles.sectionHeader}>
         <Text variant="titleMedium" style={styles.sectionTitle}>
-          Recent activity
+          Recent reminders
         </Text>
       </View>
 
@@ -163,7 +163,7 @@ export default function HomeScreen() {
             ))
           ) : (
             <Text variant="bodyMedium" style={styles.emptyText}>
-              No reminder activity yet.
+              No reminders yet.
             </Text>
           )}
         </Card.Content>

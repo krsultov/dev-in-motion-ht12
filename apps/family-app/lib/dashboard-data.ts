@@ -66,20 +66,6 @@ function toInitials(name?: string) {
   return parts.map((part) => part[0]?.toUpperCase() ?? '').join('') || 'FA';
 }
 
-function classifyReminderType(reminder: ReminderRecord): CalendarActivity['type'] {
-  const haystack = `${reminder.title} ${reminder.description ?? ''}`.toLowerCase();
-
-  if (haystack.includes('ride') || haystack.includes('trip') || haystack.includes('taxi')) {
-    return 'trip';
-  }
-
-  if (haystack.includes('ai') || haystack.includes('assistant')) {
-    return 'assistant';
-  }
-
-  return 'booking';
-}
-
 export function buildElderProfile(memoryRecord: UserMemoryRecord | null, phone: string | null): LiveElderProfile {
   return {
     aiActive: true,
@@ -103,7 +89,7 @@ export function buildCalendarActivities(reminders: ReminderRecord[]): CalendarAc
         detail: isValid ? formatTimeLabel(endTime) : 'Time unavailable',
         isFuture: isValid ? endTime.getTime() > now : false,
         title: reminder.title,
-        type: classifyReminderType(reminder),
+        type: 'booking',
       } satisfies CalendarActivity;
     })
     .sort((left, right) => `${left.date} ${left.detail}`.localeCompare(`${right.date} ${right.detail}`));
