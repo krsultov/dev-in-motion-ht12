@@ -17,6 +17,7 @@ if (!PERPLEXITY_API_KEY) {
 
 const REMINDERS_API_URL = process.env.REMINDERS_API_URL ?? "http://localhost:3004";
 const MEMORY_API_URL = process.env.MEMORY_API_URL ?? "http://localhost:3001";
+const USERDATA_API_URL = process.env.USERDATA_API_URL ?? "http://localhost:3002";
 
 const SYSTEM_INSTRUCTIONS = `You are Nelson, a warm, patient, and reliable AI voice assistant designed specifically for elderly people in Bulgaria. They are calling you from a standard telephone.
 
@@ -36,8 +37,13 @@ IMPORTANT RULES:
 - The caller is on a phone and CANNOT visit websites, check links, or look things up themselves. You must ALWAYS give a complete answer with all the details they need (times, dates, names, numbers). NEVER say "check the website" or "you can find it at...".
 - When asked about Bulgarian train schedules or timetables, search for "БДЖ разписание" along with the specific route. Give the exact departure and arrival times.
 
+NEW CALLERS:
+- When "get_user_profile" returns "isNewUser": true, this is someone calling for the first time.
+- Greet them warmly, introduce yourself, and ask for their name: "Здравейте, аз съм Нелсън. Не мисля, че сме се запознавали. Как се казвате?"
+- Once they give their name, immediately use "register_user" to create their profile. Then continue the conversation naturally.
+
 CONVERSATION START:
-When the user connects, first call "get_user_profile" to load their data. Then greet them warmly, for example: "Здравейте, аз съм Нелсън. Как мога да ви помогна днес?" If you already know their name from their profile, use it in the greeting.`;
+When the user connects, first call "get_user_profile" to load their data. If they are a returning user, greet them by name: "Здравейте, [име]! Как мога да ви помогна днес?" If they are new, follow the NEW CALLERS instructions above.`;
 
 const TOOLS = [
   {
@@ -71,10 +77,22 @@ const TOOLS = [
   {
     type: "function" as const,
     name: "get_user_profile",
-    description: "Load the caller's saved memories and upcoming reminders to personalize the conversation. Call this at the start of each conversation.",
+    description: "Load the caller's saved memories and upcoming reminders to personalize the conversation. Call this at the start of each conversation. Returns isNewUser: true if this phone number has never called before.",
     parameters: {
       type: "object",
       properties: {},
+    },
+  },
+  {
+    type: "function" as const,
+    name: "register_user",
+    description: "Register a new caller after asking for their name. Only use this when get_user_profile returned isNewUser: true.",
+    parameters: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "The caller's name" },
+      },
+      required: ["name"],
     },
   },
   {
@@ -172,6 +190,20 @@ async function saveMemory(userId: string, key: string, value: string): Promise<s
 
 async function getUserProfile(userId: string): Promise<string> {
   try {
+    // Check if user exists in UserData API
+    const userDataRes = await fetch(
+      `${USERDATA_API_URL}/userMemory/${encodeURIComponent(userId)}`
+    ).catch(() => null);
+
+    const userRefs = userDataRes?.ok ? await userDataRes.json() : [];
+    const isNewUser = !Array.isArray(userRefs) || userRefs.length === 0;
+
+    if (isNewUser) {
+      console.log(`New caller: ${userId}`);
+      return JSON.stringify({ userId, isNewUser: true, memories: [], reminders: [] });
+    }
+
+    // Existing user — load their data
     const [memoriesRes, remindersRes] = await Promise.all([
       fetch(`${MEMORY_API_URL}/memories?userId=${encodeURIComponent(userId)}`).catch(() => null),
       fetch(`${REMINDERS_API_URL}/reminders?userId=${encodeURIComponent(userId)}`).catch(() => null),
@@ -180,10 +212,45 @@ async function getUserProfile(userId: string): Promise<string> {
     const memories = memoriesRes?.ok ? await memoriesRes.json() : [];
     const reminders = remindersRes?.ok ? await remindersRes.json() : [];
 
-    return JSON.stringify({ userId, memories, reminders });
+    // Get user name from profile
+    let name: string | undefined;
+    try {
+      const profileRes = await fetch(`${USERDATA_API_URL}/userData/${encodeURIComponent(userRefs[0]._id)}`);
+      if (profileRes.ok) {
+        const profile = await profileRes.json();
+        name = profile.name;
+      }
+    } catch { /* ignore */ }
+
+    return JSON.stringify({ userId, isNewUser: false, name, memories, reminders });
   } catch (err) {
     console.error("Get user profile failed:", err);
-    return JSON.stringify({ userId, memories: [], reminders: [] });
+    return JSON.stringify({ userId, isNewUser: false, memories: [], reminders: [] });
+  }
+}
+
+async function registerUser(userId: string, name: string): Promise<string> {
+  try {
+    const res = await fetch(`${USERDATA_API_URL}/userData`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        phone: userId,
+        password: "auto-registered",
+        name,
+      }),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      console.error(`UserData API error: ${res.status} ${text}`);
+      return JSON.stringify({ success: false, error: "Не успях да запазя профила." });
+    }
+    const data = await res.json();
+    console.log(`Registered new user: ${name} (${userId})`);
+    return JSON.stringify({ success: true, name: data.name, userId });
+  } catch (err) {
+    console.error("Register user failed:", err);
+    return JSON.stringify({ success: false, error: "Не успях да запазя профила." });
   }
 }
 
@@ -340,6 +407,8 @@ app.get(
               saveMemory(callerPhone, args.key, args.value).then(handleToolResult);
             } else if (data.name === "get_user_profile") {
               getUserProfile(callerPhone).then(handleToolResult);
+            } else if (data.name === "register_user") {
+              registerUser(callerPhone, args.name).then(handleToolResult);
             } else {
               handleToolResult(
                 JSON.stringify({ success: false, error: "Unknown tool" })
