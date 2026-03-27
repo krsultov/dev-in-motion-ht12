@@ -1,5 +1,6 @@
 import { PageShell } from '@/components/PageShell'
 import { UsersTable } from '@/components/UsersTable'
+import { AnalyticsCharts } from '@/components/AnalyticsCharts'
 import { SUBSCRIPTION_PRICE, PER_MINUTE_RATE } from '@/lib/pricing'
 
 export type UserRecord = {
@@ -42,27 +43,32 @@ export default async function UsersPage() {
   return (
     <PageShell>
       <header className="flex items-center justify-between px-7 py-5 border-b border-zinc-800 flex-shrink-0">
-        <div>
-          <h1 className="text-white text-xl font-semibold">Users</h1>
-          <p className="text-zinc-500 text-sm mt-0.5">{users.length} registered</p>
-        </div>
+        <h1 className="text-white text-xl font-semibold">Users</h1>
       </header>
 
       <div className="flex-1 px-7 py-6 space-y-5 pb-8">
         <div className="grid grid-cols-3 gap-4">
           {[
-            { label: 'Total users', value: users.length },
-            { label: 'Subscription', value: subscriptionUsers },
+            { label: 'Registered', value: users.length },
+            { label: 'Subscribed', value: subscriptionUsers },
             { label: 'Per-minute', value: perMinuteUsers },
           ].map((s, i) => (
-            <div key={s.label} className="animate-fade-up bg-[#27272a] rounded-2xl p-5 border border-zinc-800" style={{ animationDelay: `${i * 80}ms` }}>
+            <div key={s.label} className="animate-fade-up bg-[#27272a] rounded-2xl px-5 py-5 border border-zinc-800" style={{ animationDelay: `${i * 80}ms` }}>
               <p className="text-zinc-400 text-sm">{s.label}</p>
-              <p className="text-white text-3xl font-bold mt-2 leading-none">{s.value}</p>
+              <p className="text-3xl font-bold mt-2 leading-none tracking-tight text-white">{s.value}</p>
             </div>
           ))}
         </div>
 
-        <UsersTable users={users} />
+        <AnalyticsCharts
+          totalUsers={users.length}
+          subscriptionUsers={subscriptionUsers}
+          perMinuteUsers={perMinuteUsers}
+        />
+
+        <div className="overflow-y-auto max-h-[420px] rounded-2xl scrollbar-thin">
+          <UsersTable users={users} />
+        </div>
       </div>
     </PageShell>
   )

@@ -7,7 +7,7 @@ export function PageShell({ children }: { children: React.ReactNode }) {
       style={{ fontFamily: 'var(--font-inter), Inter, system-ui, sans-serif' }}
     >
       <Sidebar />
-      <main className="flex-1 flex flex-col overflow-y-auto">
+      <main className="flex-1 flex flex-col overflow-y-scroll">
         {children}
       </main>
     </div>

@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 @keyframes fadeUp {
-  from { opacity: 0; transform: translateY(14px); }
-  to   { opacity: 1; transform: translateY(0);    }
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0);     }
 }
 
 @keyframes scaleIn {
@@ -39,6 +39,7 @@
 .animate-overlay-out { animation: overlayOut  0.2s  ease-in  both; }
 .animate-slide-left  { animation: slideInLeft 0.5s  cubic-bezier(0.16,1,0.3,1) both; }
 
+
 * {
   box-sizing: border-box;
 }
@@ -56,9 +57,12 @@ body {
   width: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #27272a;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #52525b;
+  background: #3f3f46;
   border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #52525b;
 }

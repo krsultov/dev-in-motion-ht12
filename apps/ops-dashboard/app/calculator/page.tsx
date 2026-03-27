@@ -30,7 +30,7 @@ export default async function CalculatorPage() {
         </div>
       </header>
 
-      <div className="flex-1 px-7 py-6 pb-8 overflow-y-auto">
+      <div className="flex-1 px-7 py-6 pb-8 animate-fade-up">
         <CostCalculator
           totalUsers={users.length}
           subscriptionUsers={subscriptionUsers}
