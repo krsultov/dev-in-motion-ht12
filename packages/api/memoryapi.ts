@@ -296,6 +296,150 @@ app.get('/stats/overview', async (c) => {
   }
 })
 
+app.get('/calls', async (c) => {
+  try {
+    const callEventsCol = await getCallEventsCollection()
+    const userId = c.req.query('userId')
+    const limit = Math.min(Number(c.req.query('limit') || 50), 200)
+    const offset = Number(c.req.query('offset') || 0)
+
+    const filter: Record<string, unknown> = {}
+    if (userId) filter.userId = userId
+
+    const [docs, total] = await Promise.all([
+      (callEventsCol as any)
+        .find(filter)
+        .sort({ startedAt: -1 })
+        .skip(offset)
+        .limit(limit)
+        .toArray(),
+      (callEventsCol as any).countDocuments(filter),
+    ])
+
+    const calls = docs.map((d: any) => ({
+      id: d._id.toHexString(),
+      userId: d.userId,
+      type: d.type,
+      startedAt: d.startedAt,
+      endedAt: d.endedAt ?? null,
+      durationSec: d.durationSec ?? null,
+      reminderId: d.reminderId ?? null,
+    }))
+
+    return c.json({ calls, total, limit, offset })
+  } catch (error) {
+    return c.json({ error: (error as Error).message }, 500)
+  }
+})
+
+app.get('/stats/calls', async (c) => {
+  try {
+    const callEventsCol = await getCallEventsCollection()
+
+    const [totalsAgg, byTypeAgg, durationDistAgg, byHourAgg] = await Promise.all([
+      (callEventsCol as any)
+        .aggregate([
+          {
+            $facet: {
+              all: [{ $count: 'count' }],
+              withDuration: [
+                { $match: { durationSec: { $exists: true, $gt: 0 } } },
+                {
+                  $group: {
+                    _id: null,
+                    avg: { $avg: '$durationSec' },
+                    median: { $median: { input: '$durationSec', method: 'approximate' } },
+                    min: { $min: '$durationSec' },
+                    max: { $max: '$durationSec' },
+                    total: { $sum: '$durationSec' },
+                    count: { $sum: 1 },
+                  },
+                },
+              ],
+            },
+          },
+        ])
+        .toArray(),
+      (callEventsCol as any)
+        .aggregate([
+          { $group: { _id: '$type', count: { $sum: 1 } } },
+        ])
+        .toArray(),
+      (callEventsCol as any)
+        .aggregate([
+          { $match: { durationSec: { $exists: true, $gt: 0 } } },
+          {
+            $bucket: {
+              groupBy: '$durationSec',
+              boundaries: [0, 30, 60, 120, 300, 600, Infinity],
+              default: 'other',
+              output: { count: { $sum: 1 } },
+            },
+          },
+        ])
+        .toArray(),
+      (callEventsCol as any)
+        .aggregate([
+          { $addFields: { parsedDate: { $dateFromString: { dateString: '$startedAt', onError: null } } } },
+          { $match: { parsedDate: { $ne: null } } },
+          { $group: { _id: { $hour: '$parsedDate' }, count: { $sum: 1 } } },
+          { $sort: { _id: 1 } },
+        ])
+        .toArray(),
+    ])
+
+    const durationLabels: Record<string, string> = {
+      '0': '0–30s',
+      '30': '30s–1m',
+      '60': '1–2m',
+      '120': '2–5m',
+      '300': '5–10m',
+      '600': '10m+',
+    }
+
+    const dur = totalsAgg[0]?.withDuration?.[0]
+    const stats = {
+      totalCalls: totalsAgg[0]?.all?.[0]?.count ?? 0,
+      completedCalls: dur?.count ?? 0,
+      avgDurationSec: Math.round(dur?.avg ?? 0),
+      medianDurationSec: Math.round(dur?.median ?? 0),
+      minDurationSec: dur?.min ?? 0,
+      maxDurationSec: dur?.max ?? 0,
+      totalMinutes: Math.round((dur?.total ?? 0) / 60),
+      byType: Object.fromEntries(byTypeAgg.map((r: any) => [r._id, r.count])),
+      durationDistribution: durationDistAgg.map((r: any) => ({
+        range: durationLabels[String(r._id)] ?? `${r._id}s+`,
+        count: r.count,
+      })),
+      byHour: byHourAgg.map((r: any) => ({ hour: r._id, count: r.count })),
+    }
+
+    return c.json(stats)
+  } catch (error) {
+    return c.json({ error: (error as Error).message }, 500)
+  }
+})
+
+app.get('/stats/call-minutes-by-user', async (c) => {
+  try {
+    const callEventsCol = await getCallEventsCollection()
+    const agg = await (callEventsCol as any)
+      .aggregate([
+        { $match: { durationSec: { $exists: true, $gt: 0 } } },
+        { $group: { _id: '$userId', totalSec: { $sum: '$durationSec' } } },
+      ])
+      .toArray()
+
+    const result: Record<string, number> = {}
+    for (const row of agg) {
+      result[row._id] = Math.round(row.totalSec / 60)
+    }
+    return c.json(result)
+  } catch (error) {
+    return c.json({ error: (error as Error).message }, 500)
+  }
+})
+
 const PORT = Number(process.env.PORT ?? 3001)
 serve({ fetch: app.fetch, port: PORT }, () => {
   console.log(`Memory REST API running at http://localhost:${PORT}`)
