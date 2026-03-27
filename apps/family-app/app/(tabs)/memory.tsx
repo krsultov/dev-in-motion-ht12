@@ -33,6 +33,7 @@ export default function MemoryScreen() {
     null,
   );
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [selectedMemory, setSelectedMemory] = useState<string | null>(null);
 
@@ -76,6 +77,7 @@ export default function MemoryScreen() {
       } finally {
         if (!options?.signal?.aborted) {
           setIsLoading(false);
+          setIsRefreshing(false);
         }
       }
     },
@@ -91,13 +93,18 @@ export default function MemoryScreen() {
     };
   }, [loadMemory]);
 
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    void loadMemory("refresh");
+  }, [loadMemory]);
+
   const screenTitle = memoryRecord?.name
     ? `Профил на ${memoryRecord.name}`
     : "Профил на паметта";
   const memoryNotes = memoryRecord?.memories ?? [];
 
   return (
-    <ScreenShell contentContainerStyle={styles.contentContainer}>
+    <ScreenShell contentContainerStyle={styles.contentContainer} refreshing={isRefreshing} onRefresh={handleRefresh}>
       <Text variant="headlineSmall" style={styles.title}>
         {screenTitle}
       </Text>

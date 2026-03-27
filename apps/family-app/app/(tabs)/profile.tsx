@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 import {
@@ -28,12 +28,11 @@ export default function ProfileScreen() {
     null,
   );
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadMemory = async () => {
+  const loadProfile = useCallback(
+    async (options?: { signal?: { aborted: boolean }; refresh?: boolean }) => {
       if (!user?.phone) {
         setMemoryRecord(null);
         setErrorMessage(
@@ -43,18 +42,20 @@ export default function ProfileScreen() {
         return;
       }
 
-      setIsLoading(true);
+      if (!options?.refresh) {
+        setIsLoading(true);
+      }
       setErrorMessage(null);
 
       try {
         const record = await getCurrentUserMemory(user.phone);
 
-        if (isMounted) {
+        if (!options?.signal?.aborted) {
           setMemoryRecord(record);
           setErrorMessage(null);
         }
       } catch (error) {
-        if (isMounted) {
+        if (!options?.signal?.aborted) {
           setMemoryRecord(null);
           setErrorMessage(
             error instanceof Error
@@ -63,18 +64,28 @@ export default function ProfileScreen() {
           );
         }
       } finally {
-        if (isMounted) {
+        if (!options?.signal?.aborted) {
           setIsLoading(false);
+          setIsRefreshing(false);
         }
       }
-    };
+    },
+    [user?.phone],
+  );
 
-    void loadMemory();
+  useEffect(() => {
+    const request = { aborted: false };
+    void loadProfile({ signal: request });
 
     return () => {
-      isMounted = false;
+      request.aborted = true;
     };
-  }, [user?.phone]);
+  }, [loadProfile]);
+
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    void loadProfile({ refresh: true });
+  }, [loadProfile]);
 
   const elderProfile = useMemo(
     () => buildElderProfile(memoryRecord, user?.phone ?? null),
@@ -87,7 +98,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <ScreenShell contentContainerStyle={styles.contentContainer}>
+    <ScreenShell contentContainerStyle={styles.contentContainer} refreshing={isRefreshing} onRefresh={handleRefresh}>
       <Text variant="headlineSmall" style={styles.title}>
         Профил
       </Text>

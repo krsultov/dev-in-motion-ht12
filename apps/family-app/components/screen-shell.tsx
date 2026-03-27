@@ -1,18 +1,31 @@
 import { ReactNode } from 'react';
-import { ScrollView, StyleProp, StyleSheet, ViewStyle } from 'react-native';
+import { RefreshControl, ScrollView, StyleProp, StyleSheet, ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type ScreenShellProps = {
   children: ReactNode;
   contentContainerStyle?: StyleProp<ViewStyle>;
+  refreshing?: boolean;
+  onRefresh?: () => void;
 };
 
-export function ScreenShell({ children, contentContainerStyle }: ScreenShellProps) {
+export function ScreenShell({ children, contentContainerStyle, refreshing, onRefresh }: ScreenShellProps) {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView
         contentContainerStyle={[styles.content, contentContainerStyle]}
-        showsVerticalScrollIndicator={false}>
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          onRefresh ? (
+            <RefreshControl
+              refreshing={refreshing ?? false}
+              onRefresh={onRefresh}
+              tintColor="#FFFFFF"
+              colors={['#FFFFFF']}
+              progressBackgroundColor="#1E1E1E"
+            />
+          ) : undefined
+        }>
         {children}
       </ScrollView>
     </SafeAreaView>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { Avatar, Card, Surface, Text } from "react-native-paper";
 
@@ -70,12 +70,11 @@ export default function HomeScreen() {
   const [recentCalls, setRecentCalls] = useState<RecentCallItem[]>([]);
   const [totalCallMinutes, setTotalCallMinutes] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadDashboard = async () => {
+  const loadDashboard = useCallback(
+    async (options?: { signal?: { aborted: boolean }; refresh?: boolean }) => {
       if (!user?.phone) {
         setMemoryRecord(null);
         setReminders([]);
@@ -88,7 +87,9 @@ export default function HomeScreen() {
         return;
       }
 
-      setIsLoading(true);
+      if (!options?.refresh) {
+        setIsLoading(true);
+      }
       setErrorMessage(null);
 
       try {
@@ -104,7 +105,7 @@ export default function HomeScreen() {
           listRecentCalls(user.phone, 4),
         ]);
 
-        if (!isMounted) {
+        if (options?.signal?.aborted) {
           return;
         }
 
@@ -156,7 +157,7 @@ export default function HomeScreen() {
 
         setErrorMessage(nextErrors.length > 0 ? nextErrors.join(" ") : null);
       } catch (error) {
-        if (!isMounted) {
+        if (options?.signal?.aborted) {
           return;
         }
 
@@ -170,18 +171,28 @@ export default function HomeScreen() {
             : "Unable to load dashboard data.",
         );
       } finally {
-        if (isMounted) {
+        if (!options?.signal?.aborted) {
           setIsLoading(false);
+          setIsRefreshing(false);
         }
       }
-    };
+    },
+    [user?.phone],
+  );
 
-    void loadDashboard();
+  useEffect(() => {
+    const request = { aborted: false };
+    void loadDashboard({ signal: request });
 
     return () => {
-      isMounted = false;
+      request.aborted = true;
     };
-  }, [user?.phone]);
+  }, [loadDashboard]);
+
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    void loadDashboard({ refresh: true });
+  }, [loadDashboard]);
 
   const elderProfile = useMemo(
     () => buildElderProfile(memoryRecord, user?.phone ?? null),
@@ -206,7 +217,7 @@ export default function HomeScreen() {
   );
 
   return (
-    <ScreenShell>
+    <ScreenShell refreshing={isRefreshing} onRefresh={handleRefresh}>
       <Text variant="headlineSmall" style={styles.title}>
         {GREETING_LABEL}, {user?.name}
       </Text>
