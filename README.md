@@ -4,8 +4,6 @@
 
 ### *The internet finally speaks to everyone — even if all you have is a landline. You call. Nelson handles the rest.*
 
-**callnelson.net**
-
 </div>
 
 ---
@@ -50,10 +48,10 @@ Nelson is a **voice-first AI agent platform** with three layers:
 - **SOS escalation** — say *"I need help"* → 112 called + all family contacts alerted simultaneously
 
 ### What the agent can do on a call
-- 🔍 **Research** — weather, bus times, pharmacy hours, news, government procedures, anything
-- ⏰ **Reminders** — *"Remind me to take my pills every day at 8am"* → Nelson calls you
-- 🧠 **Memory** — builds a living profile from every conversation
-- 🆘 **Emergency** — instant escalation with parallel notification to all trusted contacts
+- **Research** — weather, bus times, pharmacy hours, news, government procedures, anything
+- **Reminders** — *"Remind me to take my pills every day at 8am"* → Nelson calls you
+- **Memory** — builds a living profile from every conversation
+- **Emergency** — instant escalation with parallel notification to all trusted contacts
 
 ### 👨‍👩‍👧 Family App
 - **LifeCard** — set up your relative's profile: health, meds, contacts, preferences
