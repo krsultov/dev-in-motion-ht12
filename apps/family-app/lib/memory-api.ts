@@ -26,12 +26,24 @@ type MemoryEntry = {
   updatedAt: string;
 };
 
+type CallMinutesByUserResponse = Record<string, number>;
+
+export type RecentCallItem = {
+  id: string;
+  startedAt: string;
+  durationSec: number | null;
+};
+
 function asRecord(value: unknown): Record<string, unknown> | null {
   return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : null;
 }
 
 function asString(value: unknown) {
   return typeof value === 'string' ? value : '';
+}
+
+function asNumber(value: unknown) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
 function toTitleCase(input: string) {
@@ -183,6 +195,63 @@ export async function getLatestUserMemoryRecord() {
   return [...records].sort(
     (left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime(),
   )[0] ?? null;
+}
+
+export async function getUserTotalCallMinutes(phone: string) {
+  const normalizedPhone = phone.trim();
+  if (!normalizedPhone) {
+    return 0;
+  }
+
+  const response = await requestJson<unknown>(memoryApiBaseUrl, '/stats/call-minutes-by-user');
+  const minutesByUser = asRecord(response) as CallMinutesByUserResponse | null;
+
+  if (!minutesByUser) {
+    throw new Error('The call minutes payload was not valid.');
+  }
+
+  const minutes = minutesByUser[normalizedPhone];
+  return typeof minutes === 'number' && Number.isFinite(minutes) ? minutes : 0;
+}
+
+export async function listRecentCalls(phone: string, limit = 3) {
+  const normalizedPhone = phone.trim();
+  if (!normalizedPhone) {
+    return [];
+  }
+
+  const response = await requestJson<unknown>(
+    memoryApiBaseUrl,
+    `/calls?userId=${encodeURIComponent(normalizedPhone)}&limit=${encodeURIComponent(String(limit))}`,
+  );
+  const payload = asRecord(response);
+  const calls = payload?.calls;
+
+  if (!Array.isArray(calls)) {
+    throw new Error('The recent calls payload was not valid.');
+  }
+
+  return calls.reduce<RecentCallItem[]>((items, entry) => {
+    const record = asRecord(entry);
+    if (!record) {
+      return items;
+    }
+
+    const id = asString(record.id).trim();
+    const startedAt = asString(record.startedAt).trim();
+
+    if (!id || !startedAt) {
+      return items;
+    }
+
+    items.push({
+      id,
+      startedAt,
+      durationSec: asNumber(record.durationSec),
+    });
+
+    return items;
+  }, []);
 }
 
 export async function createUserMemory(payload: CreateUserMemoryPayload) {
