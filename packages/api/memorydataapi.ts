@@ -1,15 +1,16 @@
-import express from "express";
-import cors from "cors";
-import { ObjectId } from "mongodb";
-import Twilio from "twilio";
-import { CallUserMemory, type UserMemory } from "../db/src/index";
+import { Hono } from 'hono'
+import { cors } from 'hono/cors'
+import { serve } from '@hono/node-server'
+import { ObjectId } from 'mongodb'
+import Twilio from 'twilio'
+import { CallUserMemory, type UserMemory } from '../db/src/index'
 
 declare const process: {
-  env: Record<string, string | undefined>;
-  exit: (code?: number) => never;
-};
+  env: Record<string, string | undefined>
+  exit: (code?: number) => never
+}
 
-type UserMemoryDoc = UserMemory & { _id: ObjectId };
+type UserMemoryDoc = UserMemory & { _id: ObjectId }
 
 function normalize(doc: UserMemoryDoc) {
   return {
@@ -25,206 +26,173 @@ function normalize(doc: UserMemoryDoc) {
     medications: doc.medications ?? [],
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
-  };
+  }
 }
 
-const app = express();
-app.use(cors());
-app.use(express.json());
-
-app.post("/userData", async (req: any, res: any) => {
-  try {
-    const collection = await CallUserMemory();
-    const t = new Date().toISOString();
-
-    const toInsert: Omit<UserMemory, "createdAt" | "updatedAt"> & { createdAt: string; updatedAt: string } = {
-      phone: "",
-      password: "",
-      createdAt: t,
-      updatedAt: t,
-    };
-
-    if (typeof req.body?.phone === "string") toInsert.phone = req.body.phone;
-    if (typeof req.body?.password === "string") toInsert.password = req.body.password;
-    if (typeof req.body?.name === "string") toInsert.name = req.body.name;
-    if (typeof req.body?.plan === "string" && (req.body.plan === "subscription" || req.body.plan === "per-minute")) toInsert.plan = req.body.plan;
-    if (typeof req.body?.subscription === "boolean") toInsert.subscription = req.body.subscription;
-    if (Array.isArray(req.body?.memories)) toInsert.memories = req.body.memories;
-    if (Array.isArray(req.body?.contacts)) toInsert.contacts = req.body.contacts;
-    if (Array.isArray(req.body?.preferences)) toInsert.preferences = req.body.preferences;
-    if (Array.isArray(req.body?.medications)) toInsert.medications = req.body.medications;
-
-    const result = await collection.insertOne(toInsert);
-    const doc = await collection.findOne({ _id: result.insertedId });
-    if (!doc) {
-      res.status(500).json({ error: "Failed to create userData" });
-      return;
-    }
-
-    res.status(201).json(normalize(doc as UserMemoryDoc));
-  } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
-  }
-});
-
-
-app.get("/userMemory/:userId", async (req: any, res: any) => {
-  try {
-    const userId = typeof req.params?.userId === "string" ? decodeURIComponent(req.params.userId).trim() : "";
-    if (!userId) {
-      res.status(400).json({ error: "userId is required" });
-      return;
-    }
-    const collection = await CallUserMemory();
-    const docs = await collection.find({ phone: userId }).project({ _id: 1 }).toArray();
-    res.status(200).json(docs.map((d) => ({ _id: d._id.toHexString() })));
-  } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
-  }
-});
-
-app.get("/userData", async (_req: any, res: any) => {
-  try {
-    const collection = await CallUserMemory();
-    const docs = await collection.find().sort({ updatedAt: -1 }).toArray();
-    res.status(200).json(docs.map(normalize));
-  } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
-  }
-});
-
-app.get("/userData/:_id", async (req: any, res: any) => {
-  try {
-    const _id = typeof req.params?._id === "string" ? req.params._id.trim() : "";
-    if (!_id) {
-      res.status(400).json({ error: "_id is required" });
-      return;
-    }
-
-    const collection = await CallUserMemory();
-    const doc = await collection.findOne({ _id: new ObjectId(_id) } as any);
-    if (!doc) {
-      res.status(404).json({ error: "userData not found" });
-      return;
-    }
-
-    res.status(200).json(normalize(doc));
-  } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
-  }
-});
-
-app.put("/userData/:_id", async (req: any, res: any) => {
-  try {
-    const _id = typeof req.params?._id === "string" ? req.params._id.trim() : "";
-    if (!_id) {
-      res.status(400).json({ error: "_id is required" });
-      return;
-    }
-
-    const collection = await CallUserMemory();
-    const t = new Date().toISOString();
-
-    const $set: Record<string, unknown> = { updatedAt: t };
-    if (typeof req.body?.phone === "string") $set.phone = req.body.phone;
-    if (typeof req.body?.password === "string") $set.password = req.body.password;
-    if (typeof req.body?.name === "string") $set.name = req.body.name;
-    if (typeof req.body?.plan === "string" && (req.body.plan === "subscription" || req.body.plan === "per-minute")) $set.plan = req.body.plan;
-    if (typeof req.body?.subscription === "boolean") $set.subscription = req.body.subscription;
-    if (Array.isArray(req.body?.memories)) $set.memories = req.body.memories;
-    if (Array.isArray(req.body?.contacts)) $set.contacts = req.body.contacts;
-    if (Array.isArray(req.body?.preferences)) $set.preferences = req.body.preferences;
-    if (Array.isArray(req.body?.medications)) $set.medications = req.body.medications;
-
-    const doc = await collection.findOneAndUpdate({ _id: new ObjectId(_id) } as any, { $set }, { returnDocument: "after" });
-
-    if (!doc) {
-      res.status(404).json({ error: "userData not found" });
-      return;
-    }
-
-    res.status(200).json(normalize(doc));
-  } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
-  }
-});
-
-// ── OTP via Twilio Verify ────────────────────────────────────────────────────
-
-const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID ?? "";
-const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN ?? "";
-const TWILIO_VERIFY_SERVICE_SID = process.env.TWILIO_VERIFY_SERVICE_SID ?? "";
+const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID ?? ''
+const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN ?? ''
+const TWILIO_VERIFY_SERVICE_SID = process.env.TWILIO_VERIFY_SERVICE_SID ?? ''
 
 function getTwilioClient() {
   if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_VERIFY_SERVICE_SID) {
-    throw new Error("Twilio Verify is not configured — set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_VERIFY_SERVICE_SID");
+    throw new Error('Twilio Verify is not configured — set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_VERIFY_SERVICE_SID')
   }
-  return Twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+  return Twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
 }
 
-app.post("/otp/send", async (req: any, res: any) => {
+const app = new Hono()
+app.use('*', cors())
+
+app.post('/userData', async (c) => {
   try {
-    const phone = typeof req.body?.phone === "string" ? req.body.phone.trim() : "";
-    if (!phone) {
-      res.status(400).json({ error: "phone is required" });
-      return;
+    const collection = await CallUserMemory()
+    const t = new Date().toISOString()
+    const body = await c.req.json().catch(() => ({}))
+
+    const toInsert: Omit<UserMemory, 'createdAt' | 'updatedAt'> & { createdAt: string; updatedAt: string } = {
+      phone: '',
+      password: '',
+      createdAt: t,
+      updatedAt: t,
     }
 
-    const client = getTwilioClient();
+    if (typeof body?.phone === 'string') toInsert.phone = body.phone
+    if (typeof body?.password === 'string') toInsert.password = body.password
+    if (typeof body?.name === 'string') toInsert.name = body.name
+    if (typeof body?.plan === 'string' && (body.plan === 'subscription' || body.plan === 'per-minute')) toInsert.plan = body.plan
+    if (typeof body?.subscription === 'boolean') toInsert.subscription = body.subscription
+    if (Array.isArray(body?.memories)) toInsert.memories = body.memories
+    if (Array.isArray(body?.contacts)) toInsert.contacts = body.contacts
+    if (Array.isArray(body?.preferences)) toInsert.preferences = body.preferences
+    if (Array.isArray(body?.medications)) toInsert.medications = body.medications
+
+    const result = await collection.insertOne(toInsert)
+    const doc = await collection.findOne({ _id: result.insertedId })
+    if (!doc) return c.json({ error: 'Failed to create userData' }, 500)
+
+    return c.json(normalize(doc as UserMemoryDoc), 201)
+  } catch (error) {
+    return c.json({ error: (error as Error).message }, 500)
+  }
+})
+
+app.get('/userMemory/:userId', async (c) => {
+  try {
+    const userId = decodeURIComponent(c.req.param('userId')).trim()
+    if (!userId) return c.json({ error: 'userId is required' }, 400)
+
+    const collection = await CallUserMemory()
+    const docs = await collection.find({ phone: userId } as any).project({ _id: 1 }).toArray()
+    return c.json(docs.map((d) => ({ _id: (d._id as ObjectId).toHexString() })))
+  } catch (error) {
+    return c.json({ error: (error as Error).message }, 500)
+  }
+})
+
+app.get('/userData', async (c) => {
+  try {
+    const collection = await CallUserMemory()
+    const docs = await collection.find().sort({ updatedAt: -1 }).toArray()
+    return c.json(docs.map(normalize))
+  } catch (error) {
+    return c.json({ error: (error as Error).message }, 500)
+  }
+})
+
+app.get('/userData/:_id', async (c) => {
+  try {
+    const _id = c.req.param('_id').trim()
+    if (!_id) return c.json({ error: '_id is required' }, 400)
+
+    const collection = await CallUserMemory()
+    const doc = await collection.findOne({ _id: new ObjectId(_id) } as any)
+    if (!doc) return c.json({ error: 'userData not found' }, 404)
+
+    return c.json(normalize(doc as UserMemoryDoc))
+  } catch (error) {
+    return c.json({ error: (error as Error).message }, 500)
+  }
+})
+
+app.put('/userData/:_id', async (c) => {
+  try {
+    const _id = c.req.param('_id').trim()
+    if (!_id) return c.json({ error: '_id is required' }, 400)
+
+    const body = await c.req.json().catch(() => ({}))
+    const collection = await CallUserMemory()
+    const t = new Date().toISOString()
+
+    const $set: Record<string, unknown> = { updatedAt: t }
+    if (typeof body?.phone === 'string') $set.phone = body.phone
+    if (typeof body?.password === 'string') $set.password = body.password
+    if (typeof body?.name === 'string') $set.name = body.name
+    if (typeof body?.plan === 'string' && (body.plan === 'subscription' || body.plan === 'per-minute')) $set.plan = body.plan
+    if (typeof body?.subscription === 'boolean') $set.subscription = body.subscription
+    if (Array.isArray(body?.memories)) $set.memories = body.memories
+    if (Array.isArray(body?.contacts)) $set.contacts = body.contacts
+    if (Array.isArray(body?.preferences)) $set.preferences = body.preferences
+    if (Array.isArray(body?.medications)) $set.medications = body.medications
+
+    const doc = await collection.findOneAndUpdate({ _id: new ObjectId(_id) } as any, { $set }, { returnDocument: 'after' })
+    if (!doc) return c.json({ error: 'userData not found' }, 404)
+
+    return c.json(normalize(doc as UserMemoryDoc))
+  } catch (error) {
+    return c.json({ error: (error as Error).message }, 500)
+  }
+})
+
+// ── OTP via Twilio Verify ─────────────────────────────────────────────────────
+
+app.post('/otp/send', async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}))
+    const phone = typeof body?.phone === 'string' ? body.phone.trim() : ''
+    if (!phone) return c.json({ error: 'phone is required' }, 400)
+
+    const client = getTwilioClient()
     await client.verify.v2
       .services(TWILIO_VERIFY_SERVICE_SID)
-      .verifications.create({ to: phone, channel: "sms" });
+      .verifications.create({ to: phone, channel: 'sms' })
 
-    res.status(200).json({ success: true });
+    return c.json({ success: true })
   } catch (error) {
-    console.error("OTP send error:", error);
-    res.status(500).json({ error: (error as Error).message });
+    console.error('OTP send error:', error)
+    return c.json({ error: (error as Error).message }, 500)
   }
-});
+})
 
-app.post("/otp/verify", async (req: any, res: any) => {
+app.post('/otp/verify', async (c) => {
   try {
-    const phone = typeof req.body?.phone === "string" ? req.body.phone.trim() : "";
-    const code = typeof req.body?.code === "string" ? req.body.code.trim() : "";
+    const body = await c.req.json().catch(() => ({}))
+    const phone = typeof body?.phone === 'string' ? body.phone.trim() : ''
+    const code = typeof body?.code === 'string' ? body.code.trim() : ''
 
-    if (!phone || !code) {
-      res.status(400).json({ error: "phone and code are required" });
-      return;
-    }
+    if (!phone || !code) return c.json({ error: 'phone and code are required' }, 400)
 
-    const client = getTwilioClient();
+    const client = getTwilioClient()
     const check = await client.verify.v2
       .services(TWILIO_VERIFY_SERVICE_SID)
-      .verificationChecks.create({ to: phone, code });
+      .verificationChecks.create({ to: phone, code })
 
-    if (check.status !== "approved") {
-      res.status(200).json({ verified: false });
-      return;
-    }
+    if (check.status !== 'approved') return c.json({ verified: false })
 
-    // Look up existing user by phone
-    const collection = await CallUserMemory();
-    const doc = await collection.findOne({ phone } as any);
+    const collection = await CallUserMemory()
+    const doc = await collection.findOne({ phone } as any)
 
     if (doc) {
-      res.status(200).json({
-        verified: true,
-        user: { name: doc.name ?? "Family member", phone: doc.phone },
-      });
+      return c.json({ verified: true, user: { name: doc.name ?? 'Family member', phone: doc.phone } })
     } else {
-      res.status(200).json({ verified: true, isNewUser: true, user: { name: "Family member", phone } });
+      return c.json({ verified: true, isNewUser: true, user: { name: 'Family member', phone } })
     }
   } catch (error) {
-    console.error("OTP verify error:", error);
-    res.status(500).json({ error: (error as Error).message });
+    console.error('OTP verify error:', error)
+    return c.json({ error: (error as Error).message }, 500)
   }
-});
+})
 
-const PORT = Number(process.env.PORT ?? 3002);
-app.listen(PORT, (error?: Error) => {
-  if (error) {
-    console.error("Failed to start userData REST API:", error);
-    process.exit(1);
-  }
-  console.log(`userData REST API running at http://localhost:${PORT}`);
-});
+const PORT = Number(process.env.PORT ?? 3002)
+serve({ fetch: app.fetch, port: PORT }, () => {
+  console.log(`userData REST API running at http://localhost:${PORT}`)
+})
