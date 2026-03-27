@@ -226,7 +226,7 @@ app.get('/stats/overview', async (c) => {
     const userMemoryCol = db.collection(USER_MEMORY_COLLECTION)
     const callEventsCol = await getCallEventsCollection()
 
-    const [totalUsers, usersByMonthAgg, totalCalls, callsByMonthAgg, avgDurationAgg, planAgg] =
+    const [totalUsers, usersByMonthAgg, totalCalls, callsByMonthAgg, avgDurationAgg, minutesByMonthAgg, planAgg] =
       await Promise.all([
         userMemoryCol.countDocuments(),
         userMemoryCol
@@ -249,7 +249,16 @@ app.get('/stats/overview', async (c) => {
         (callEventsCol as any)
           .aggregate([
             { $match: { durationSec: { $exists: true, $gt: 0 } } },
-            { $group: { _id: null, avg: { $avg: '$durationSec' } } },
+            { $group: { _id: null, avg: { $avg: '$durationSec' }, total: { $sum: '$durationSec' } } },
+          ])
+          .toArray(),
+        (callEventsCol as any)
+          .aggregate([
+            { $match: { durationSec: { $exists: true, $gt: 0 } } },
+            { $addFields: { parsedDate: { $dateFromString: { dateString: '$startedAt', onError: null } } } },
+            { $match: { parsedDate: { $ne: null } } },
+            { $group: { _id: { $dateToString: { format: '%Y-%m', date: '$parsedDate' } }, totalSec: { $sum: '$durationSec' } } },
+            { $sort: { _id: 1 } },
           ])
           .toArray(),
         userMemoryCol
@@ -265,12 +274,16 @@ app.get('/stats/overview', async (c) => {
           .toArray(),
       ])
 
+    const totalCallSec = avgDurationAgg[0]?.total ?? 0
+
     const stats: StatsOverview = {
       totalUsers,
       usersByMonth: usersByMonthAgg.map((r: any) => ({ month: r._id, count: r.count })),
       totalCalls,
       callsByMonth: callsByMonthAgg.map((r: any) => ({ month: r._id, count: r.count })),
       avgCallDurationSec: avgDurationAgg[0]?.avg ?? 0,
+      totalCallMinutes: Math.round(totalCallSec / 60),
+      minutesByMonth: minutesByMonthAgg.map((r: any) => ({ month: r._id, minutes: Math.round(r.totalSec / 60) })),
       planDistribution: {
         subscription: planAgg[0]?.subscription ?? 0,
         perMinute: planAgg[0]?.perMinute ?? 0,

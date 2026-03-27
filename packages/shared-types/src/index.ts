@@ -68,6 +68,8 @@ export type StatsOverview = {
   totalCalls: number;
   callsByMonth: Array<{ month: string; count: number }>;
   avgCallDurationSec: number;
+  totalCallMinutes: number;
+  minutesByMonth: Array<{ month: string; minutes: number }>;
   planDistribution: { subscription: number; perMinute: number };
 };
 

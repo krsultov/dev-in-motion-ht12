@@ -30,6 +30,8 @@ type StatsOverview = {
   totalCalls: number
   callsByMonth: Array<{ month: string; count: number }>
   avgCallDurationSec: number
+  totalCallMinutes: number
+  minutesByMonth: Array<{ month: string; minutes: number }>
   planDistribution: { subscription: number; perMinute: number }
 }
 
@@ -89,7 +91,13 @@ export default async function UsersPage() {
     users: entry.count,
   }))
 
+  const totalCallMinutes = stats?.totalCallMinutes ?? 0
+  const totalCalls = stats?.totalCalls ?? 0
   const avgMinutes = stats ? stats.avgCallDurationSec / 60 : 0
+  const minutesByMonth = (stats?.minutesByMonth ?? []).map((entry) => ({
+    month: entry.month,
+    minutes: entry.minutes,
+  }))
   const revenueData = (stats?.callsByMonth ?? []).map((entry) => ({
     month: entry.month,
     subscription: Math.round(subscriptionUsers * SUBSCRIPTION_PRICE * (entry.count / Math.max(stats!.totalCalls, 1))),
@@ -103,11 +111,13 @@ export default async function UsersPage() {
       </header>
 
       <div className="flex-1 px-7 py-6 space-y-5 pb-8">
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-5 gap-4">
           {[
             { label: 'Registered', value: users.length },
             { label: 'Subscribed', value: subscriptionUsers },
             { label: 'Per-minute', value: perMinuteUsers },
+            { label: 'Total calls', value: totalCalls },
+            { label: 'Call minutes', value: totalCallMinutes },
           ].map((s, i) => (
             <div key={s.label} className="animate-fade-up bg-[#27272a] rounded-2xl px-5 py-5 border border-zinc-800" style={{ animationDelay: `${i * 80}ms` }}>
               <p className="text-zinc-400 text-sm">{s.label}</p>
@@ -121,6 +131,7 @@ export default async function UsersPage() {
           perMinuteUsers={perMinuteUsers}
           userGrowth={userGrowth}
           revenueData={revenueData}
+          minutesByMonth={minutesByMonth}
         />
 
         <div className="rounded-2xl">
