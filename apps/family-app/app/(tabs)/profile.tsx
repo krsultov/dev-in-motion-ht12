@@ -17,9 +17,9 @@ import { getCurrentUserMemory } from "@/lib/memory-api";
 import type { UserMemoryRecord } from "@/types/memory";
 
 const familyAccountProfile = {
-  name: "Family member",
-  permissionLevel: "Local Frontend Access",
-  relationshipLabel: "Family member",
+  name: "Член на семейството",
+  permissionLevel: "Локален достъп до приложението",
+  relationshipLabel: "Член на семейството",
 };
 
 export default function ProfileScreen() {
@@ -37,7 +37,7 @@ export default function ProfileScreen() {
       if (!user?.phone) {
         setMemoryRecord(null);
         setErrorMessage(
-          "Sign in with a phone number to load the live profile.",
+          "Влезте с телефонен номер, за да заредите профила в реално време.",
         );
         setIsLoading(false);
         return;
@@ -59,7 +59,7 @@ export default function ProfileScreen() {
           setErrorMessage(
             error instanceof Error
               ? error.message
-              : "Unable to load the live profile right now.",
+              : "Профилът в реално време не може да бъде зареден в момента.",
           );
         }
       } finally {
@@ -89,16 +89,16 @@ export default function ProfileScreen() {
   return (
     <ScreenShell contentContainerStyle={styles.contentContainer}>
       <Text variant="headlineSmall" style={styles.title}>
-        Profile
+        Профил
       </Text>
       <Text variant="bodyMedium" style={styles.subtitle}>
-        Family access, care context, and notification settings.
+        Семеен достъп, контекст за грижа и настройки за известия.
       </Text>
 
       <Card mode="outlined" style={styles.card}>
         <Card.Content style={styles.cardContent}>
           <Text variant="titleMedium" style={styles.sectionTitle}>
-            Elder profile
+            Профил на близкия
           </Text>
 
           <View style={styles.profileHeader}>
@@ -121,7 +121,7 @@ export default function ProfileScreen() {
           {isLoading ? (
             <Surface style={styles.statePanel} elevation={0}>
               <Text variant="bodyMedium" style={styles.stateText}>
-                Loading live profile data.
+                Зареждане на профилните данни в реално време.
               </Text>
             </Surface>
           ) : null}
@@ -137,7 +137,7 @@ export default function ProfileScreen() {
           {!isLoading && !errorMessage && !memoryRecord ? (
             <Surface style={styles.statePanel} elevation={0}>
               <Text variant="bodyMedium" style={styles.stateText}>
-                No live profile record exists for this phone number yet.
+                Все още няма запис за профил в реално време за този телефонен номер.
               </Text>
             </Surface>
           ) : null}
@@ -157,14 +157,14 @@ export default function ProfileScreen() {
                   : styles.subscriptionChipInactiveText
               }
             >
-              {memoryRecord?.subscription ? "Subscribed" : "Not subscribed"}
+              {memoryRecord?.subscription ? "Абониран" : "Не е абониран"}
             </Chip>
             <Chip
               compact
               style={[styles.infoChip, styles.languageChip]}
               textStyle={styles.darkChipText}
             >
-              {memoryRecord ? `${memoryRecord.memories.length} memory notes` : "No memory notes yet"}
+              {memoryRecord ? `${memoryRecord.memories.length} бележки за памет` : "Все още няма бележки за памет"}
             </Chip>
           </View>
 
@@ -172,7 +172,7 @@ export default function ProfileScreen() {
             <View style={styles.statsRow}>
               <View style={styles.statItem}>
                 <Text variant="bodySmall" style={styles.statLabel}>
-                  Memory notes
+                  Бележки за памет
                 </Text>
                 <Text variant="titleMedium" style={styles.statValue}>
                   {memoryRecord.memories.length}
@@ -180,7 +180,7 @@ export default function ProfileScreen() {
               </View>
               <View style={styles.statItem}>
                 <Text variant="bodySmall" style={styles.statLabel}>
-                  Last update
+                  Последно обновяване
                 </Text>
                 <Text variant="titleMedium" style={styles.statValue}>
                   {elderProfile.lastUpdatedLabel}
@@ -194,7 +194,7 @@ export default function ProfileScreen() {
       <Card mode="outlined" style={styles.card}>
         <Card.Content style={styles.cardContent}>
           <Text variant="titleMedium" style={styles.sectionTitle}>
-            Your account
+            Вашият акаунт
           </Text>
 
           <View style={styles.profileHeader}>
@@ -209,14 +209,14 @@ export default function ProfileScreen() {
                 {user?.name ?? familyAccountProfile.name}
               </Text>
               <Text variant="bodyMedium" style={styles.profileMeta}>
-                Frontend-only sign-in
+                Вход само през приложението
               </Text>
             </View>
           </View>
 
           <View style={styles.footerBlock}>
             <Text variant="bodySmall" style={styles.footerLabel}>
-              Permission level
+              Ниво на достъп
             </Text>
             <Chip
               compact
@@ -234,7 +234,7 @@ export default function ProfileScreen() {
             style={styles.signOutButton}
             onPress={handleSignOut}
           >
-            Sign Out
+            Изход
           </Button>
         </Card.Content>
       </Card>

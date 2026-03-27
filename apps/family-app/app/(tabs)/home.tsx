@@ -119,10 +119,7 @@ export default function HomeScreen() {
   return (
     <ScreenShell>
       <Text variant="headlineSmall" style={styles.title}>
-        Good morning, {user?.name}
-      </Text>
-      <Text variant="bodyMedium" style={styles.subtitle}>
-        Your mother&apos;s assistant is active and keeping things on track.
+        Здравей, {user?.name}
       </Text>
 
       <Surface style={styles.heroCard} elevation={1}>
@@ -138,19 +135,19 @@ export default function HomeScreen() {
               {elderProfile.name}
             </Text>
             <Text variant="bodySmall" style={styles.parentMeta}>
-              Last updated: {elderProfile.lastUpdatedLabel}
+              Последно обновяване: {elderProfile.lastUpdatedLabel}
             </Text>
           </View>
         </View>
 
         <View style={styles.heroTags}>
           <StatusTag
-            label={elderProfile.aiActive ? "AI active" : "AI inactive"}
+            label={elderProfile.aiActive ? "AI активно" : "AI неактивно"}
             tone={elderProfile.aiActive ? "approved" : "declined"}
           />
           <View style={styles.heroPhoneRow}>
             <Text variant="bodySmall" style={styles.heroFooterLabel}>
-              Linked phone
+              Свързан телефон
             </Text>
             <Text variant="bodyMedium" style={styles.heroFooterValue}>
               {elderProfile.phone}
@@ -163,7 +160,7 @@ export default function HomeScreen() {
         <Card mode="outlined" style={styles.stateCard}>
           <Card.Content>
             <Text variant="bodyMedium" style={styles.stateText}>
-              Loading live dashboard data.
+              Зареждане на таблото с данни в реално време.
             </Text>
           </Card.Content>
         </Card>
@@ -181,7 +178,7 @@ export default function HomeScreen() {
 
       <View style={styles.sectionHeader}>
         <Text variant="titleMedium" style={styles.sectionTitle}>
-          Next up
+          Следващо
         </Text>
       </View>
 
@@ -191,7 +188,7 @@ export default function HomeScreen() {
             <View style={styles.nextUpBlock}>
               <View style={styles.nextUpBadge}>
                 <Text variant="bodySmall" style={styles.nextUpBadgeText}>
-                  Upcoming reminder
+                  Предстоящо напомняне
                 </Text>
               </View>
               <Text variant="titleMedium" style={styles.nextUpTitle}>
@@ -206,7 +203,7 @@ export default function HomeScreen() {
             </View>
           ) : (
             <Text variant="bodyMedium" style={styles.emptyText}>
-              No upcoming reminders yet.
+              Все още няма предстоящи напомняния.
             </Text>
           )}
         </Card.Content>
@@ -219,6 +216,7 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   title: {
+    marginBottom: 40,
     color: "#FFFFFF",
     fontWeight: "700",
     letterSpacing: -0.3,

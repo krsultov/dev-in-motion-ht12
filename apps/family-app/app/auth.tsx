@@ -97,35 +97,35 @@ export default function AuthScreen() {
         <View style={styles.heroBlock}>
           <View style={styles.kickerBadge}>
             <Text variant="bodySmall" style={styles.kickerText}>
-              Family access
+              Семеен достъп
             </Text>
           </View>
           <Text variant="headlineLarge" style={styles.title}>
-            Welcome to Nelson Family app!
+            Добре дошли в семейното приложение Nelson!
           </Text>
           <Text variant="bodyLarge" style={styles.subtitle}>
-            Sign in with the linked phone number to open the live family
-            dashboard.
+            Влезте със свързания телефонен номер, за да отворите семейното
+            табло в реално време.
           </Text>
         </View>
 
         <Surface style={styles.card} elevation={1}>
           <Text variant="titleMedium" style={styles.cardTitle}>
-            {isOtpSent ? "Verify your code" : "Sign in"}
+            {isOtpSent ? "Потвърдете кода си" : "Вход"}
           </Text>
           <Text variant="bodyMedium" style={styles.cardText}>
             {isOtpSent
-              ? `Enter the 6-digit code sent to ${phone.trim()}.`
-              : "Enter the linked phone number to receive a one-time code."}
+              ? `Въведете 6-цифрения код, изпратен до ${phone.trim()}.`
+              : "Въведете свързания телефонен номер, за да получите еднократен код."}
           </Text>
 
           {!isOtpSent ? (
             <View style={styles.fieldBlock}>
               <Text variant="bodySmall" style={styles.fieldLabel}>
-                Phone number
+                Телефонен номер
               </Text>
               <TextInput
-                label="Linked phone"
+                label="Свързан телефон"
                 placeholder="+359 888 000 0002"
                 mode="outlined"
                 keyboardType="phone-pad"
@@ -144,10 +144,10 @@ export default function AuthScreen() {
           ) : (
             <View style={styles.fieldBlock}>
               <Text variant="bodySmall" style={styles.fieldLabel}>
-                Verification code
+                Код за потвърждение
               </Text>
               <TextInput
-                label="6-digit code"
+                label="6-цифрен код"
                 placeholder="123456"
                 mode="outlined"
                 keyboardType="number-pad"
@@ -166,7 +166,7 @@ export default function AuthScreen() {
                 <View />
                 <Pressable onPress={handleChangePhone}>
                   <Text variant="bodySmall" style={styles.changePhoneText}>
-                    Change phone
+                    Смени телефона
                   </Text>
                 </Pressable>
               </View>
@@ -184,7 +184,7 @@ export default function AuthScreen() {
               void (isOtpSent ? handleVerifyOtp() : handleRequestOtp())
             }
           >
-            {isOtpSent ? "Verify and continue" : "Send code"}
+            {isOtpSent ? "Потвърди и продължи" : "Изпрати код"}
           </Button>
 
           {isOtpSent ? (
@@ -194,7 +194,7 @@ export default function AuthScreen() {
               disabled={isLoading}
               onPress={() => void handleRequestOtp()}
             >
-              Resend code
+              Изпрати кода отново
             </Button>
           ) : null}
         </Surface>

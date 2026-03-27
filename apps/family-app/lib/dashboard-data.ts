@@ -37,7 +37,7 @@ function formatDateKey(value: Date) {
 }
 
 function formatTimeLabel(value: Date) {
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat('bg-BG', {
     hour: 'numeric',
     minute: '2-digit',
   }).format(value);
@@ -153,7 +153,7 @@ function formatRelativeLabel(value: string) {
 }
 
 function formatCalendarLabel(value: Date) {
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat('bg-BG', {
     month: 'short',
     day: 'numeric',
   }).format(value);
@@ -278,7 +278,7 @@ export function buildRecentActivity(reminders: ReminderRecord[]): HomeSummaryAct
       const parsedReminder = parseReminderDate(reminder);
       const endTime = parsedReminder.date;
       const fallbackDescription = parsedReminder.parseStrategy !== 'fallback'
-        ? `Scheduled for ${new Intl.DateTimeFormat('en-US', {
+        ? `Scheduled for ${new Intl.DateTimeFormat('bg-BG', {
             dateStyle: 'medium',
             timeStyle: 'short',
           }).format(endTime)}`

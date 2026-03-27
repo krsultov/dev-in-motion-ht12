@@ -16,7 +16,7 @@ function splitMemoryNote(note: string) {
 
   if (separatorIndex <= 0) {
     return {
-      label: "Memory",
+      label: "Памет",
       value: trimmed,
     };
   }
@@ -43,7 +43,9 @@ export default function MemoryScreen() {
     ) => {
       if (!user?.phone) {
         setMemoryRecord(null);
-        setErrorMessage("Sign in with a phone number to load memory data.");
+        setErrorMessage(
+          "Влезте с телефонен номер, за да заредите данните за паметта.",
+        );
         setIsLoading(false);
         return;
       }
@@ -69,7 +71,7 @@ export default function MemoryScreen() {
         setErrorMessage(
           error instanceof Error
             ? error.message
-            : "Unable to load memory data right now.",
+            : "Данните за паметта не могат да бъдат заредени в момента.",
         );
       } finally {
         if (!options?.signal?.aborted) {
@@ -90,8 +92,8 @@ export default function MemoryScreen() {
   }, [loadMemory]);
 
   const screenTitle = memoryRecord?.name
-    ? `${memoryRecord.name}'s profile`
-    : "Memory profile";
+    ? `Профил на ${memoryRecord.name}`
+    : "Профил на паметта";
   const memoryNotes = memoryRecord?.memories ?? [];
 
   return (
@@ -100,15 +102,15 @@ export default function MemoryScreen() {
         {screenTitle}
       </Text>
       <Text variant="bodyMedium" style={styles.subtitle}>
-        What the AI knows about your family member.
+        Какво знае AI за вашия близък.
       </Text>
 
       <View style={styles.statusBlock}>
         <Text variant="bodySmall" style={styles.statusLabel}>
-          Linked phone
+          Свързан телефон
         </Text>
         <Text variant="bodyMedium" style={styles.statusValue}>
-          {user?.phone ?? "Not available"}
+          {user?.phone ?? "Няма наличен"}
         </Text>
       </View>
 
@@ -116,10 +118,10 @@ export default function MemoryScreen() {
         <Card mode="outlined" style={styles.feedbackCard}>
           <Card.Content>
             <Text variant="titleMedium" style={styles.feedbackTitle}>
-              Loading memory
+              Зареждане на паметта
             </Text>
             <Text variant="bodyMedium" style={styles.feedbackBody}>
-              Fetching memory notes from {memoryApiBaseUrl}.
+              Извличане на бележките за памет от {memoryApiBaseUrl}.
             </Text>
           </Card.Content>
         </Card>
@@ -130,7 +132,7 @@ export default function MemoryScreen() {
           <Card.Content style={styles.feedbackContent}>
             <View style={styles.feedbackText}>
               <Text variant="titleMedium" style={styles.feedbackTitle}>
-                Couldn&apos;t load memory
+                Паметта не можа да бъде заредена
               </Text>
               <Text variant="bodyMedium" style={styles.feedbackBody}>
                 {errorMessage}
@@ -142,7 +144,7 @@ export default function MemoryScreen() {
               textColor="#18181B"
               onPress={() => void loadMemory()}
             >
-              Try again
+              Опитай отново
             </Button>
           </Card.Content>
         </Card>
@@ -152,10 +154,10 @@ export default function MemoryScreen() {
         <Card mode="outlined" style={styles.feedbackCard}>
           <Card.Content>
             <Text variant="titleMedium" style={styles.feedbackTitle}>
-              No memory found yet
+              Все още няма открита памет
             </Text>
             <Text variant="bodyMedium" style={styles.feedbackBody}>
-              We didn&apos;t find a memory record for this phone number yet.
+              Все още не открихме запис за памет за този телефонен номер.
             </Text>
           </Card.Content>
         </Card>
@@ -166,16 +168,16 @@ export default function MemoryScreen() {
           <View style={styles.notesHeader}>
             <View style={styles.notesHeaderCopy}>
               <Text variant="titleMedium" style={styles.notesTitle}>
-                Memory notes
+                Бележки за памет
               </Text>
               <Text variant="bodyMedium" style={styles.notesSubtitle}>
-                Saved details the assistant can use to stay personal and helpful.
+                Запазени детайли, които Нелсън е запомнил за потребителя.
               </Text>
             </View>
             <View style={styles.notesBadge}>
               <Ionicons name="albums-outline" size={16} color="#23244D" />
               <Text variant="bodySmall" style={styles.notesBadgeText}>
-                {memoryNotes.length} notes
+                {memoryNotes.length} бележки
               </Text>
             </View>
           </View>
@@ -185,7 +187,7 @@ export default function MemoryScreen() {
               <View style={styles.summaryRow}>
                 <View style={styles.summaryCard}>
                   <Text variant="bodySmall" style={styles.summaryLabel}>
-                    Total
+                    Общо
                   </Text>
                   <Text variant="headlineSmall" style={styles.summaryValue}>
                     {memoryNotes.length}
@@ -200,7 +202,7 @@ export default function MemoryScreen() {
                   ]}
                 >
                   <Text variant="bodySmall" style={styles.summaryLabel}>
-                    Latest
+                    Последна
                   </Text>
                   <Text
                     variant="bodyMedium"
@@ -210,7 +212,7 @@ export default function MemoryScreen() {
                     {memoryNotes[0]}
                   </Text>
                   <Text variant="bodySmall" style={styles.summaryHint}>
-                    Tap to read full note
+                    Докоснете, за да прочетете цялата бележка
                   </Text>
                 </Pressable>
               </View>
@@ -234,7 +236,7 @@ export default function MemoryScreen() {
                           ]}
                         />
                         <Text variant="bodySmall" style={styles.noteIndex}>
-                          Note {index + 1}
+                          Бележка {index + 1}
                         </Text>
                       </View>
                       <Text variant="bodySmall" style={styles.noteLabel}>
@@ -254,10 +256,11 @@ export default function MemoryScreen() {
                 <Ionicons name="albums-outline" size={22} color="#4D4FA0" />
               </View>
               <Text variant="titleMedium" style={styles.feedbackTitle}>
-                No memory notes stored yet
+                Все още няма запазени бележки за памет
               </Text>
               <Text variant="bodyMedium" style={styles.feedbackBody}>
-                Saved notes will show up here once the assistant learns something meaningful.
+                Запазените бележки ще се появят тук, след като асистентът научи
+                нещо смислено.
               </Text>
             </View>
           )}
@@ -277,15 +280,20 @@ export default function MemoryScreen() {
               </View>
               <View style={styles.memoryModalCopy}>
                 <Text variant="titleMedium" style={styles.memoryModalTitle}>
-                  Latest memory
+                  Последна бележка
                 </Text>
                 <Text variant="bodySmall" style={styles.memoryModalSubtitle}>
-                  Full note
+                  Пълна бележка
                 </Text>
               </View>
             </View>
-            <Button compact mode="text" textColor="#8B8DF1" onPress={() => setSelectedMemory(null)}>
-              Close
+            <Button
+              compact
+              mode="text"
+              textColor="#8B8DF1"
+              onPress={() => setSelectedMemory(null)}
+            >
+              Затвори
             </Button>
           </View>
 

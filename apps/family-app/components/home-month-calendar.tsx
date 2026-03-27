@@ -5,7 +5,7 @@ import { Card, IconButton, Surface, Text } from 'react-native-paper';
 
 import type { CalendarActivity } from '@/types/ui-models';
 
-const weekdayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+const weekdayLabels = ['П', 'В', 'С', 'Ч', 'П', 'С', 'Н'];
 const upcomingReminderColor = '#8B8DF1';
 const previousReminderColor = '#D29B2F';
 
@@ -63,7 +63,7 @@ function isTodayDate(value: Date, today: Date) {
 }
 
 function formatMonthLabel(value: Date) {
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat('bg-BG', {
     month: 'long',
     year: 'numeric',
   }).format(value);
@@ -71,7 +71,7 @@ function formatMonthLabel(value: Date) {
 
 function formatSelectedDateLabel(dateKey: string) {
   const [year, month, day] = dateKey.split('-').map(Number);
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat('bg-BG', {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
@@ -144,10 +144,10 @@ export function HomeMonthCalendar({ reminders }: HomeMonthCalendarProps) {
         <View style={styles.calendarHeader}>
           <View style={styles.calendarHeading}>
             <Text variant="titleMedium" style={styles.calendarTitle}>
-              Reminders calendar
+              Календар с напомняния
             </Text>
             <Text variant="bodySmall" style={styles.calendarSubtitle}>
-              Browse reminder dates, then tap a marked day for reminder details.
+              Разгледайте датите с напомняния, след това докоснете отбелязан ден за подробности.
             </Text>
           </View>
           <View style={styles.monthSwitcher}>
@@ -173,13 +173,13 @@ export function HomeMonthCalendar({ reminders }: HomeMonthCalendarProps) {
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: upcomingReminderColor }]} />
             <Text variant="bodySmall" style={styles.legendText}>
-              Upcoming
+              Предстоящи
             </Text>
           </View>
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: previousReminderColor }]} />
             <Text variant="bodySmall" style={styles.legendText}>
-              Previous
+              Предишни
             </Text>
           </View>
         </View>
@@ -258,7 +258,7 @@ export function HomeMonthCalendar({ reminders }: HomeMonthCalendarProps) {
                   ) : null}
                   <Text variant="bodySmall" style={styles.activityDrawerItemDetail}>
                     {item.detail}
-                    {item.isFuture ? ' | upcoming' : item.isPast ? ' | previous' : ''}
+                    {item.isFuture ? ' | предстоящо' : item.isPast ? ' | предишно' : ''}
                   </Text>
                 </View>
               </View>
@@ -267,10 +267,10 @@ export function HomeMonthCalendar({ reminders }: HomeMonthCalendarProps) {
         ) : (
           <Surface style={styles.emptyState} elevation={0}>
             <Text variant="bodyMedium" style={styles.emptyStateTitle}>
-              No reminders this month yet
+              Този месец все още няма напомняния
             </Text>
             <Text variant="bodySmall" style={styles.emptyStateText}>
-              Try another month to see older or upcoming reminders.
+              Опитайте друг месец, за да видите по-стари или предстоящи напомняния.
             </Text>
           </Surface>
         )}
