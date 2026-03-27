@@ -46,7 +46,7 @@ export default function HomeScreen() {
       try {
         const [memoryResult, remindersResult] = await Promise.allSettled([
           getCurrentUserMemory(user.phone),
-          listReminders(),
+          listReminders(user.phone),
         ]);
 
         if (!isMounted) {

@@ -90,6 +90,22 @@ services:
       - memory-api
     restart: unless-stopped
 
+  ops-dashboard:
+    build: .
+    command: sh -c "cd apps/ops-dashboard && npx next build && npx next start -p 3009"
+    ports:
+      - "3009:3009"
+    env_file: .env
+    environment:
+      - USER_DATA_API_URL=http://userdata-api:3002
+      - MEMORIES_API_URL=http://memory-api:3001
+      - REMINDERS_API_URL=http://reminders-api:3004
+    depends_on:
+      - memory-api
+      - userdata-api
+      - reminders-api
+    restart: unless-stopped
+
   cloudflared:
     image: cloudflare/cloudflared:latest
     command: tunnel --no-autoupdate run

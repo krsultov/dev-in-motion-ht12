@@ -18,7 +18,7 @@ async function getUsers(): Promise<UserRecord[]> {
 
 export default async function CalculatorPage() {
   const users = await getUsers()
-  const subscriptionUsers = users.filter((u) => getPlan(u._id).type === 'subscription').length
+  const subscriptionUsers = users.filter((u) => getPlan(u).type === 'subscription').length
   const perMinuteUsers = users.length - subscriptionUsers
 
   return (

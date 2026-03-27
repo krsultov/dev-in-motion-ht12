@@ -12,6 +12,7 @@ COPY apps/voice-gateway/package.json apps/voice-gateway/
 COPY packages/mcp/package.json packages/mcp/
 COPY packages/api/package.json packages/api/
 COPY packages/db/package.json packages/db/
+COPY apps/ops-dashboard/package.json apps/ops-dashboard/
 COPY packages/shared-types/package.json packages/shared-types/
 
 RUN pnpm install --frozen-lockfile

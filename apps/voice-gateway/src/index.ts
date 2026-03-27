@@ -304,6 +304,8 @@ app.get(
     let callerPhone = "unknown";
     let reminderId: string | null = null;
     let reminderTitle: string | null = null;
+    let callEventId: string | null = null;
+    let callStartedAt: Date | null = null;
 
     let openaiWs: WebSocket | null = null;
     let streamSid: string | null = null;
@@ -511,7 +513,23 @@ IMPORTANT: The caller is on a phone and CANNOT visit websites. Always give compl
             callerPhone = msg.start.customParameters?.callerPhone ?? "unknown";
             reminderId = msg.start.customParameters?.reminderId ?? null;
             reminderTitle = msg.start.customParameters?.reminderTitle ?? null;
+            callStartedAt = new Date();
             console.log(`Stream started: ${streamSid}, caller: ${callerPhone}${reminderId ? `, reminder: ${reminderId}` : ""}`);
+
+            // Log call event (fire-and-forget)
+            fetch(`${MEMORY_API_URL}/call-events`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                userId: callerPhone,
+                type: reminderId ? "outbound" : "inbound",
+                startedAt: callStartedAt.toISOString(),
+                ...(reminderId ? { reminderId } : {}),
+              }),
+            })
+              .then((r) => r.json())
+              .then((data: any) => { callEventId = data._id ?? null; })
+              .catch((err) => console.error("Failed to log call start:", err));
             break;
 
           case "media":
@@ -540,11 +558,25 @@ IMPORTANT: The caller is on a phone and CANNOT visit websites. Always give compl
 
       onClose() {
         console.log("Twilio media stream disconnected");
+
+        // Log call end (fire-and-forget)
+        if (callEventId && callStartedAt) {
+          const endedAt = new Date();
+          const durationSec = Math.round((endedAt.getTime() - callStartedAt.getTime()) / 1000);
+          fetch(`${MEMORY_API_URL}/call-events/${callEventId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ endedAt: endedAt.toISOString(), durationSec }),
+          }).catch((err) => console.error("Failed to log call end:", err));
+        }
+
         if (openaiWs) {
           openaiWs.close();
           openaiWs = null;
         }
         streamSid = null;
+        callEventId = null;
+        callStartedAt = null;
       },
 
       onError(event) {

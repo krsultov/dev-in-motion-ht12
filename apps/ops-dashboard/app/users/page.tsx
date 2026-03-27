@@ -7,6 +7,7 @@ export type UserRecord = {
   _id: string
   name?: string
   phone: string
+  plan?: 'subscription' | 'per-minute'
   memories?: string[]
   contacts?: unknown[]
   medications?: unknown[]
@@ -15,10 +16,20 @@ export type UserRecord = {
   updatedAt: string
 }
 
-export function getPlan(id: string): { type: 'subscription' | 'per-minute'; price: string } {
-  return parseInt(id.slice(-2), 16) < 128
+export function getPlan(user: UserRecord): { type: 'subscription' | 'per-minute'; price: string } {
+  const planType = user.plan ?? 'per-minute'
+  return planType === 'subscription'
     ? { type: 'subscription', price: `€${SUBSCRIPTION_PRICE}/mo` }
     : { type: 'per-minute', price: `€${PER_MINUTE_RATE}/min` }
+}
+
+type StatsOverview = {
+  totalUsers: number
+  usersByMonth: Array<{ month: string; count: number }>
+  totalCalls: number
+  callsByMonth: Array<{ month: string; count: number }>
+  avgCallDurationSec: number
+  planDistribution: { subscription: number; perMinute: number }
 }
 
 async function getUsers(): Promise<UserRecord[]> {
@@ -34,11 +45,38 @@ async function getUsers(): Promise<UserRecord[]> {
   }
 }
 
-export default async function UsersPage() {
-  const users = await getUsers()
+async function getStats(): Promise<StatsOverview | null> {
+  try {
+    const res = await fetch(
+      `${process.env.MEMORIES_API_URL ?? 'http://localhost:3001'}/stats/overview`,
+      { cache: 'no-store' },
+    )
+    if (!res.ok) return null
+    return res.json()
+  } catch {
+    return null
+  }
+}
 
-  const subscriptionUsers = users.filter((u) => getPlan(u._id).type === 'subscription').length
-  const perMinuteUsers = users.length - subscriptionUsers
+export default async function UsersPage() {
+  const [users, stats] = await Promise.all([getUsers(), getStats()])
+
+  const subscriptionUsers = stats?.planDistribution.subscription
+    ?? users.filter((u) => getPlan(u).type === 'subscription').length
+  const perMinuteUsers = stats?.planDistribution.perMinute
+    ?? (users.length - subscriptionUsers)
+
+  const userGrowth = (stats?.usersByMonth ?? []).map((entry) => ({
+    month: entry.month,
+    users: entry.count,
+  }))
+
+  const avgMinutes = stats ? stats.avgCallDurationSec / 60 : 0
+  const revenueData = (stats?.callsByMonth ?? []).map((entry) => ({
+    month: entry.month,
+    subscription: Math.round(subscriptionUsers * SUBSCRIPTION_PRICE * (entry.count / Math.max(stats!.totalCalls, 1))),
+    perMinute: Math.round(perMinuteUsers * avgMinutes * PER_MINUTE_RATE * (entry.count / Math.max(stats!.totalCalls, 1))),
+  }))
 
   return (
     <PageShell>
@@ -61,9 +99,10 @@ export default async function UsersPage() {
         </div>
 
         <AnalyticsCharts
-          totalUsers={users.length}
           subscriptionUsers={subscriptionUsers}
           perMinuteUsers={perMinuteUsers}
+          userGrowth={userGrowth}
+          revenueData={revenueData}
         />
 
         <div className="overflow-y-auto max-h-[420px] rounded-2xl scrollbar-thin">

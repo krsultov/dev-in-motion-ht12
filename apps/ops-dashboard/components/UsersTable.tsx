@@ -57,7 +57,7 @@ export function UsersTable({ users }: { users: UserRecord[] }) {
           </thead>
           <tbody>
             {users.map((user, i) => {
-              const plan = getPlan(user._id)
+              const plan = getPlan(user)
               return (
                 <tr key={user._id} className="animate-fade-up border-t border-zinc-800 hover:bg-zinc-800/30 transition-colors" style={{ animationDelay: `${i * 40}ms` }}>
                   <td className="px-5 py-3">
@@ -124,11 +124,11 @@ export function UsersTable({ users }: { users: UserRecord[] }) {
               <p className="text-white font-semibold text-base">{selected.name ?? 'Unknown'}</p>
               <p className="text-zinc-400 text-sm mt-0.5">{selected.phone}</p>
               <span className={`mt-2 text-xs font-medium px-2.5 py-1 rounded-full ${
-                getPlan(selected._id).type === 'subscription'
+                getPlan(selected).type === 'subscription'
                   ? 'bg-[#2e2b5c] text-[#7c73e6]'
                   : 'bg-[#1a3a2a] text-[#4ade80]'
               }`}>
-                {getPlan(selected._id).type === 'subscription' ? `Subscription — €${SUBSCRIPTION_PRICE}/mo` : `Per-minute — €${PER_MINUTE_RATE}/min`}
+                {getPlan(selected).type === 'subscription' ? `Subscription — €${SUBSCRIPTION_PRICE}/mo` : `Per-minute — €${PER_MINUTE_RATE}/min`}
               </span>
             </div>
 

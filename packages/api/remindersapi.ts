@@ -1,4 +1,5 @@
 import express from "express";
+import cors from "cors";
 import CronExpressionParser from "cron-parser";
 import { ObjectId, type Collection, type WithId } from "mongodb";
 import { getDb } from "../db/src/index";
@@ -72,6 +73,7 @@ async function getRemindersCollection(): Promise<Collection<ReminderStored>> {
 }
 
 const app = express();
+app.use(cors());
 app.use(express.json());
 
 app.get("/reminders", async (req: any, res: any) => {
