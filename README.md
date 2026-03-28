@@ -62,6 +62,10 @@ Nelson is a **voice-first AI agent platform** with three layers:
 - **Cost tracker** — GPT Realtime costs per call and per user
 - **Open SOS log** *(planned)* — emergency events with timestamps and outcomes
 - **Agent health** *(planned)* — failed calls, low-confidence turns, timeout alerts
+- 
+
+<img width="1919" height="940" alt="image" src="https://github.com/user-attachments/assets/2a1e7e4a-e6b6-4fcc-81b3-50d56f904209" />
+
 
 ---
 
